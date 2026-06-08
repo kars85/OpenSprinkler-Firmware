@@ -180,7 +180,7 @@ static void applyV1Weather(ArduinoJson::JsonDocument& doc) {
 	os.checkwt_success_lasttime = tnow;
 
 	// scale (gated by success, like legacy): /v1 scale 0..200, firmware accepts 0..250
-	if (doc["scale"].is<int>()) {
+	if (doc["scale"].is<int>() || doc["scale"].is<double>()) {  // tolerate JSON floats (100.0); as<int>() truncates like atoi
 		int v = doc["scale"].as<int>();
 		if (v>=0 && v<=250 && v != os.iopts[IOPT_WATER_PERCENTAGE]) {
 			os.iopts[IOPT_WATER_PERCENTAGE] = v;
@@ -194,7 +194,7 @@ static void applyV1Weather(ArduinoJson::JsonDocument& doc) {
 	else wt_restricted = 0;
 
 	// rainDelay -> rd (always, like legacy): hours
-	if (doc["rainDelay"].is<int>()) {
+	if (doc["rainDelay"].is<int>() || doc["rainDelay"].is<double>()) {
 		int v = doc["rainDelay"].as<int>();
 		if (v>0) {
 			os.nvdata.rd_stop_time = tnow + (unsigned long) v * 3600;
@@ -205,13 +205,13 @@ static void applyV1Weather(ArduinoJson::JsonDocument& doc) {
 	}
 
 	// time-field superset (producer FR-P1.2a): sunrise/sunset 0..1440, tz 0..108, eip uint32
-	if (doc["sunrise"].is<int>()) {
+	if (doc["sunrise"].is<int>() || doc["sunrise"].is<double>()) {
 		int v = doc["sunrise"].as<int>();
 		if (v>=0 && v<=1440 && (uint16_t)v != os.nvdata.sunrise_time) {
 			os.nvdata.sunrise_time = v; save_nvdata = true; os.weather_update_flag |= WEATHER_UPDATE_SUNRISE;
 		}
 	}
-	if (doc["sunset"].is<int>()) {
+	if (doc["sunset"].is<int>() || doc["sunset"].is<double>()) {
 		int v = doc["sunset"].as<int>();
 		if (v>=0 && v<=1440 && (uint16_t)v != os.nvdata.sunset_time) {
 			os.nvdata.sunset_time = v; save_nvdata = true; os.weather_update_flag |= WEATHER_UPDATE_SUNSET;
@@ -223,7 +223,7 @@ static void applyV1Weather(ArduinoJson::JsonDocument& doc) {
 			os.nvdata.external_ip = l; save_nvdata = true; os.weather_update_flag |= WEATHER_UPDATE_EIP;
 		}
 	}
-	if (doc["tz"].is<int>()) {
+	if (doc["tz"].is<int>() || doc["tz"].is<double>()) {
 		int v = doc["tz"].as<int>();
 		if (v>=0 && v<=108 && v != os.iopts[IOPT_TIMEZONE]) {
 			os.iopts[IOPT_TIMEZONE] = v; os.iopts_save(); os.weather_update_flag |= WEATHER_UPDATE_TZ;
