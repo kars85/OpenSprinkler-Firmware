@@ -19,6 +19,17 @@ const MINIFY_OPTIONS = {
   decodeEntities: true,
 };
 
+// --- Gzip size-regression gate -------------------------------------------------
+// Each embedded page is served from PROGMEM on flash-constrained targets (ESP8266
+// ETHER_BUFFER_SIZE=2048). Pin a per-page gzip budget so accidental bloat fails the
+// PlatformIO prebuild (run_prebuild.py halts the build on non-zero exit) instead of
+// silently eating flash. Tighten budgets as pages shrink; raise deliberately (with
+// review) if a page legitimately needs to grow. Every .html MUST declare a budget.
+const GZ_SIZE_BUDGETS = {
+  "ap_home.html": 3072,   // Wi-Fi setup (AP mode)
+  "update.html":  4096,   // OTA firmware upload (bundles a vanilla MD5 impl)
+};
+
 function toCIdent(name) {
   return name.replace(/[^a-zA-Z0-9_]/g, "_").replace(/^(\d)/, "_$1");
 }
@@ -46,6 +57,7 @@ async function main() {
   let totalOrig = 0;
   let totalGz   = 0;
   const items = [];
+  const budgetViolations = [];
   let headerBody = `#pragma once
 #include <Arduino.h>
 
@@ -71,8 +83,20 @@ typedef struct {
     totalOrig += origSize;
     totalGz += gzSize;
 
+    const budget = GZ_SIZE_BUDGETS[fname];
+    let budgetNote;
+    if (budget === undefined) {
+      budgetNote = "NO BUDGET DECLARED (add one to GZ_SIZE_BUDGETS)";
+      budgetViolations.push(`${fname}: no gzip budget declared — add an entry to GZ_SIZE_BUDGETS in compress_htmls.mjs`);
+    } else if (gzSize > budget) {
+      budgetNote = `OVER BUDGET (${gzSize} > ${budget})`;
+      budgetViolations.push(`${fname}: gzipped ${gzSize} bytes exceeds budget ${budget} bytes (+${gzSize - budget})`);
+    } else {
+      budgetNote = `within budget (${gzSize}/${budget}, ${budget - gzSize} to spare)`;
+    }
+
     console.log(`Processing ${fname}...`);
-    console.log(`  -> Original: ${origSize} bytes | Compressed: ${gzSize} bytes`);
+    console.log(`  -> Original: ${origSize} bytes | Compressed: ${gzSize} bytes | ${budgetNote}`);
 
     const ident = toCIdent(path.basename(fname, ".html")) + "_html_gz";
     const keyPath = toPathKey(fname);
@@ -107,6 +131,16 @@ const size_t ${ident}_len = ${gz.length};
   console.log(`Total compressed size: ${totalGz} bytes`);
   const savings = totalOrig > 0 ? (100 * (1 - totalGz / totalOrig)).toFixed(2) : "0.00";
   console.log(`Total flash memory savings: ${savings}%`);
+
+  // Gzip size-regression gate: fail the build (and thus the PlatformIO prebuild) on any breach.
+  if (budgetViolations.length) {
+    console.error("\n--------------------------------------------------");
+    console.error(`HTML gzip size gate FAILED (${budgetViolations.length} issue(s)):`);
+    for (const v of budgetViolations) console.error(`  - ${v}`);
+    console.error("Reduce the page or, if the growth is intended, raise the budget in compress_htmls.mjs (with review).");
+    console.error("--------------------------------------------------");
+    process.exit(1);
+  }
 }
 
 main().catch(err => {
