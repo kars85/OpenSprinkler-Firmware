@@ -157,8 +157,169 @@ static void getweather_callback_with_peel_header(char* buffer) {
 	getweather_callback(buffer);
 }
 
+#if !defined(OS_AVR)
+/* ============================================================================
+ * /v1 JSON weather adapter (GitHub issue #2) — ADDITIVE, non-AVR only.
+ *
+ * Opt-in via IOPT_USE_WEATHER_V1 (default 0 = legacy). When enabled, GetWeather()
+ * tries the /v1/watering JSON endpoint and, on ANY failure (transport, non-200,
+ * malformed/`error` body), falls through to the unchanged legacy flat path. The
+ * legacy parser (getweather_callback) is intentionally left byte-for-byte intact.
+ *
+ * applyV1Weather() reproduces the legacy effect-contract field-for-field so the
+ * /v1 and legacy paths apply identical controller-state mutations. /v1/watering
+ * (with the producer-side time-field superset) carries scale/rainDelay/restricted
+ * plus the OS-encoded tz/sunrise/sunset/eip; success/failure derives from HTTP
+ * status (no body `errCode`). /v1 does not carry `scales` (service no longer emits).
+ * ========================================================================== */
+static void applyV1Weather(ArduinoJson::JsonDocument& doc) {
+	bool save_nvdata = false;
+	time_os_t tnow = os.now_tz();
+	// Reached only on a clean HTTP 200 with a valid, non-error body: this is success.
+	wt_errCode = 0;
+	os.checkwt_success_lasttime = tnow;
+
+	// scale (gated by success, like legacy): /v1 scale 0..200, firmware accepts 0..250
+	if (doc["scale"].is<int>() || doc["scale"].is<double>()) {  // tolerate JSON floats (100.0); as<int>() truncates like atoi
+		int v = doc["scale"].as<int>();
+		if (v>=0 && v<=250 && v != os.iopts[IOPT_WATER_PERCENTAGE]) {
+			os.iopts[IOPT_WATER_PERCENTAGE] = v;
+			os.iopts_save();
+			os.weather_update_flag |= WEATHER_UPDATE_WL;
+		}
+	}
+
+	// restricted (always, like legacy): /v1 emits a boolean; default 0 if absent
+	if (doc["restricted"].is<bool>()) wt_restricted = doc["restricted"].as<bool>() ? 1 : 0;
+	else wt_restricted = 0;
+
+	// rainDelay -> rd (always, like legacy): hours
+	if (doc["rainDelay"].is<int>() || doc["rainDelay"].is<double>()) {
+		int v = doc["rainDelay"].as<int>();
+		if (v>0) {
+			os.nvdata.rd_stop_time = tnow + (unsigned long) v * 3600;
+			os.raindelay_start();
+		} else if (v==0) {
+			os.raindelay_stop();
+		}
+	}
+
+	// time-field superset (producer FR-P1.2a): sunrise/sunset 0..1440, tz 0..108, eip uint32
+	if (doc["sunrise"].is<int>() || doc["sunrise"].is<double>()) {
+		int v = doc["sunrise"].as<int>();
+		if (v>=0 && v<=1440 && (uint16_t)v != os.nvdata.sunrise_time) {
+			os.nvdata.sunrise_time = v; save_nvdata = true; os.weather_update_flag |= WEATHER_UPDATE_SUNRISE;
+		}
+	}
+	if (doc["sunset"].is<int>() || doc["sunset"].is<double>()) {
+		int v = doc["sunset"].as<int>();
+		if (v>=0 && v<=1440 && (uint16_t)v != os.nvdata.sunset_time) {
+			os.nvdata.sunset_time = v; save_nvdata = true; os.weather_update_flag |= WEATHER_UPDATE_SUNSET;
+		}
+	}
+	if (!doc["eip"].isNull()) {  // IPs exceed INT_MAX, so check presence then read as uint32
+		uint32_t l = doc["eip"].as<uint32_t>();
+		if (l != os.nvdata.external_ip) {
+			os.nvdata.external_ip = l; save_nvdata = true; os.weather_update_flag |= WEATHER_UPDATE_EIP;
+		}
+	}
+	if (doc["tz"].is<int>() || doc["tz"].is<double>()) {
+		int v = doc["tz"].as<int>();
+		if (v>=0 && v<=108 && v != os.iopts[IOPT_TIMEZONE]) {
+			os.iopts[IOPT_TIMEZONE] = v; os.iopts_save(); os.weather_update_flag |= WEATHER_UPDATE_TZ;
+		}
+	}
+
+	// rawData passthrough: serialize the /v1 `raw` object into wt_rawData (truncated to the buffer)
+	if (!doc["raw"].isNull()) {
+		ArduinoJson::serializeJson(doc["raw"], wt_rawData, TMP_BUFFER_SIZE);
+		wt_rawData[TMP_BUFFER_SIZE-1] = 0;
+	}
+
+	// /v1 does not carry multi-day `scales`; clear the dormant array on success (matches legacy
+	// behavior when `scales` is absent).
+	md_N = 0;
+
+	if(save_nvdata) os.nvdata_save();
+	write_log(LOGDATA_WATERLEVEL, os.checkwt_success_lasttime);
+}
+
+static void getweather_v1_callback(char* buffer) {
+	// buffer holds the full raw HTTP response (status line + headers + body); unlike the legacy
+	// callback we read the status line here instead of peeling+discarding it.
+	int status = 0;
+	char* sp = strchr(buffer, ' ');
+	if (sp) status = atoi(sp + 1);
+	if (status != 200) { wt_errCode = (status>0) ? status : HTTP_RQT_NOT_RECEIVED; return; }
+
+	char* body = strstr(buffer, "\r\n\r\n");
+	if (body) body += 4;
+	else { body = strstr(buffer, "\n\n"); if (body) body += 2; }
+	if (!body) { wt_errCode = HTTP_RQT_NOT_RECEIVED; return; }
+
+	ArduinoJson::JsonDocument doc;
+	ArduinoJson::DeserializationError error = ArduinoJson::deserializeJson(doc, body);
+	if (error) {
+		DEBUG_PRINT(F("v1: deserializeJson() failed: "));
+		DEBUG_PRINTLN(error.c_str());
+		wt_errCode = HTTP_RQT_NOT_RECEIVED; return;
+	}
+	if (!doc["error"].isNull()) { wt_errCode = HTTP_RQT_NOT_RECEIVED; return; } // {error:{code,message}}
+
+	applyV1Weather(doc);
+}
+
+// Returns true if the /v1 fetch+parse succeeded (wt_errCode==0). On false, the caller falls back
+// to the legacy flat path. Mirrors the legacy host/protocol parsing; uses HTTPS by default.
+static bool GetWeatherV1() {
+	BufferFiller bf = BufferFiller(tmp_buffer, TMP_BUFFER_SIZE*2);
+	int method = os.iopts[IOPT_USE_WEATHER] & 0x7f;  // clear the restriction high bit
+	if(method==WEATHER_METHOD_MONTHLY) method=WEATHER_METHOD_MANUAL;  // monthly handled locally
+	// firmware methods 0..3 align with /v1 method ids 0..3 (monthly already mapped to manual)
+	bf.emit_p(PSTR("v1/watering?loc=$O&method=$D&fwv=$D"),
+				SOPT_LOCATION,
+				method,
+				(int)os.iopts[IOPT_FW_VERSION]);
+	// urlEncode only encodes spaces/quotes/non-ASCII; it preserves '/', '?', '&', '=' (same as legacy)
+	urlEncode(tmp_buffer);
+	strcpy(ether_buffer, "GET /");
+	strcat(ether_buffer, tmp_buffer);
+
+	char *host = tmp_buffer;
+	os.sopt_load(SOPT_WEATHERURL, host);
+	char *host_start = host;
+	bool use_ssl = true;
+	int port = 443;
+	if (strncmp_P(host, PSTR("http://"), 7) == 0) { use_ssl = false; port = 80; host_start = host + 7; }
+	else if (strncmp_P(host, PSTR("https://"), 8) == 0) { use_ssl = true; port = 443; host_start = host + 8; }
+	char *colon = strchr(host_start, ':');
+	if (colon) { *colon = '\0'; port = atoi(colon + 1); }
+
+	strcat(ether_buffer, " HTTP/1.0\r\nHOST: ");
+	strcat(ether_buffer, host_start);
+	strcat(ether_buffer, "\r\nUser-Agent: ");
+	strcat(ether_buffer, user_agent_string);
+	strcat(ether_buffer, "\r\nAccept: application/json\r\n\r\n");
+
+	wt_errCode = HTTP_RQT_NOT_RECEIVED;
+	DEBUG_PRINT(ether_buffer);
+	int ret = os.send_http_request(host_start, port, ether_buffer, getweather_v1_callback, use_ssl);
+	if (ret != HTTP_RQT_SUCCESS) {
+		if (wt_errCode < 0) wt_errCode = ret;
+		return false;
+	}
+	return (wt_errCode == 0);
+}
+#endif // !OS_AVR
+
 void GetWeather() {
 	if(!os.network_connected()) return;
+#if !defined(OS_AVR)
+	// Opt-in /v1 JSON path (default off). On any /v1 failure, fall through to the legacy flat path.
+	if (os.iopts[IOPT_USE_WEATHER_V1]) {
+		if (GetWeatherV1()) return;
+	}
+#endif
 	// use temp buffer to construct get command
 	BufferFiller bf = BufferFiller(tmp_buffer, TMP_BUFFER_SIZE*2);
 	int method = os.iopts[IOPT_USE_WEATHER];
