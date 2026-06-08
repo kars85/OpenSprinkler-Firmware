@@ -901,6 +901,7 @@ void do_loop()
 					}
 
 					// process all selected stations
+					bool prog_queued = false; // per-program: did THIS program queue any station this minute?
 					for(unsigned char oi=0;oi<os.nstations;oi++) {
 						sid=order[oi];
 						bid=sid>>3;
@@ -929,17 +930,21 @@ void do_loop()
 									q->sid = sid;
 									q->pid = pid+1;
 									match_found = true;
+									prog_queued = true;
 								} else {
 									// queue is full
 								}
 							}// if water_time
 						}// if prog.durations[sid]
 					}// for sid
-					if(match_found) {
+					if(prog_queued) {
+						// use this program's own queued state, not the cumulative match_found,
+						// so a program skipped in a minute where another program ran is still reported as skipped
 						notif.add(NOTIFY_PROGRAM_SCHED, pid, prog.use_weather?wl:100);
 					} else {
 						// program being skipped e.g. due to 0% watering level
-						notif.add(NOTIFY_PROGRAM_SCHED, pid, -1, wt_restricted);
+						// only label as weather-restriction when this program actually uses weather scaling
+						notif.add(NOTIFY_PROGRAM_SCHED, pid, -1, prog.use_weather ? wt_restricted : 0);
 					}
 					//delete run-once if on final runtime (stations have already been queued)
 					if(will_delete){
