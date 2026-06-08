@@ -128,6 +128,15 @@
             margin: 20px 0;
             min-height: 20px;
         }
+
+        /* Visually hidden but available to screen readers */
+        .sr-only {
+            position: absolute;
+            width: 1px; height: 1px;
+            padding: 0; margin: -1px;
+            overflow: hidden; clip: rect(0,0,0,0);
+            white-space: nowrap; border: 0;
+        }
     </style>
 </head>
 <body>
@@ -139,15 +148,16 @@
         <label>Available Networks</label>
         <div class="table-container">
             <table id='rd'>
+                <caption class="sr-only">Detected WiFi networks; select one to fill the SSID field</caption>
                 <thead>
                     <tr>
-                        <th>Detected SSID</th>
-                        <th>BSSID</th>
-                        <th>Signal</th>
-                        <th>Ch.</th>
+                        <th scope="col">Detected SSID</th>
+                        <th scope="col">BSSID</th>
+                        <th scope="col">Signal</th>
+                        <th scope="col">Ch.</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody aria-live="polite" aria-busy="true">
                     <tr>
                         <td colspan="4">(Scanning...)</td>
                     </tr>
@@ -156,14 +166,15 @@
         </div>
     </div>
 
+    <form id='wf' onsubmit='sf();return false;'>
     <div id='div_input'>
         <div class="form-group">
             <label for="ssid">SSID</label>
-            <input type='text' id='ssid'>
+            <input type='text' id='ssid' required maxlength='32' autocomplete='off' aria-describedby='msg'>
         </div>
         <div class="form-group">
             <label for="pass">Password</label>
-            <input type='password' id='pass'>
+            <input type='password' id='pass' maxlength='64' autocomplete='off'>
         </div>
         <div class="form-group">
             <label for="bssid">BSSID (optional)</label>
@@ -175,8 +186,9 @@
         </div>
     </div>
 
-    <p id='msg'></p>
-    <button type='button' id='butt' onclick='sf()'><b>Submit</b></button>
+    <p id='msg' role='status' aria-live='polite'></p>
+    <button type='submit' id='butt'><b>Submit</b></button>
+    </form>
 </main>
 
 <script>
@@ -192,6 +204,7 @@ function tryConnect() {
     var ip=''+(jd.ip%256)+'.'+((jd.ip/256>>0)%256)+'.'+(((jd.ip/256>>0)/256>>0)%256)+'.'+(((jd.ip/256>>0)/256>>0)/256>>0);
     id('msg').innerHTML='<b><font color=green>Connected! Device IP: '+ip+'</font></b><br>Device is rebooting. Switch back to<br>the above WiFi network, and then<br>click the button below to redirect.'
     id('butt').innerHTML='Go to '+ip;id('butt').disabled=false;
+    id('butt').type='button';
     id('butt').onclick=function rd(){window.open('http://'+ip);}
     clearInterval(tci);
     }
@@ -236,6 +249,7 @@ function loadSSIDs() {
       ssids.sort((a,b) => {return b[2]-a[2];}); // sort by signal strength
       var tableBody = document.querySelector("#rd tbody");
       tableBody.innerHTML = ''; // Clear the '(Scanning...)' message
+      tableBody.setAttribute('aria-busy','false');
       if (!ssids || ssids.length === 0) {
           tableBody.innerHTML = "<tr><td colspan='4'>No networks found.</td></tr>";
           return;
