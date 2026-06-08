@@ -31,16 +31,24 @@ The consumer only pulls these top-level keys today: `errCode`, `scale`, `restric
 
 `scale=0` already means "do not water" with no firmware change required. The weather callback accepts `scale` in the range `0..250` and stores it as `IOPT_WATER_PERCENTAGE` (`weather.cpp:72-79`). During scheduling, station run times are multiplied by `wl / 100`, so `wl == 0` reduces all durations to zero and the program is skipped (`main.cpp:886-943`).
 
-## Restricted Gap
+## Restricted (top-level) — verified end-to-end
 
-Firmware has a complete top-level `restricted` path today:
+**Producer status:** as of OpenSprinkler-Weather PR #6 the service now emits top-level `restricted=1` when its rain restriction fires (previously it sent only `scale=0`). This closes the former gap and is the additive enhancement called for by `firmware-integration-requirements.md` **FR-P0.4**.
 
-- The parser reads `restricted` into `wt_restricted` (`weather.cpp:82-86`).
-- Scheduling forces `wl = 0` when `wt_restricted > 0` (`main.cpp:887-900`).
-- `/jc` exposes the state as `wtrestr` (`opensprinkler_server.cpp:1273-1283`).
-- Skipped-program notifications include the restriction bit and can label the skip as weather-restriction-driven (`main.cpp:939-943`, `notifier.cpp:375-407`).
+**Firmware behavior (verified against source — no firmware change required for the core contract):**
 
-Current cross-repo gap: if the producer does not emit top-level `restricted`, restriction reaches the controller only through `scale=0`. Watering still skips correctly, but firmware cannot label the skip as a restriction or surface `wtrestr`/restriction-specific notifications.
+- **Parse — PASS.** `getweather_callback` reads `restricted` into `wt_restricted` via `findKeyVal`, and resets `wt_restricted = 0` when the key is absent (`weather.cpp:82-86`). This parse is **unconditional w.r.t. `errCode`** — unlike `scale`, which is gated by `wt_errCode == 0` (`weather.cpp:72`).
+- **Watering suppression — PASS (requires `prog.use_weather`).** Scheduling forces `wl = 0` when `wt_restricted > 0` for weather-enabled programs (`main.cpp:887-888`); `wl = 0` scales `water_time` to `0` (`main.cpp:917`), so no station is queued (`main.cpp:922/925`).
+- **Status surface — PASS.** `/jc` emits `"wtrestr":wt_restricted` (`opensprinkler_server.cpp:1273/1282`).
+- **Skip notification — PARTIAL (best-effort labeling, two pre-existing limits).** A fully-skipped program emits `notif.add(NOTIFY_PROGRAM_SCHED, pid, -1, wt_restricted)` (`main.cpp:941`); `notifier.cpp` then publishes MQTT `{"state":"skipped","wtrestr":<bval>}` and appends *"due to weather restriction."* to IFTTT/email only when `bval > 0` (`notifier.cpp:378-392`). Caveats:
+  1. **`match_found` is cumulative per minute, not per program** (`main.cpp:862`, set at `:931`, never reset in the `for(pid…)` loop). If any earlier program queued a station that minute, a later *restricted* weather program takes the scheduled branch (`main.cpp:938-939`) and reports `{"state":1,"wl":0}` instead of the `wtrestr` skip — the restriction label is lost in multi-program minutes.
+  2. **The skip branch passes the global `wt_restricted` regardless of `prog.use_weather`** (`main.cpp:941`), so a non-weather program skipped for an unrelated reason during an active restriction can be mislabeled *"due to weather restriction."*
+
+  These are latent firmware notification behaviors, **not** regressions from the producer change. They do not affect watering suppression or `/jc` status. Hardening them (reset `match_found` per program; gate the restriction label on `prog.use_weather`) would be an optional firmware change, out of scope for the verification.
+
+**Edge cases (verified):** `restricted` is parsed even when `errCode != 0` (so a stale value can't persist — it is reset to `0` when absent); the weather-success-timeout reset zeroes `wt_restricted` (along with `wl→100`) for non-manual methods (`main.cpp:1224-1229`), so a restriction self-clears if the service stops responding (fail-open).
+
+**Regression guard:** if the producer stops emitting top-level `restricted`, the controller silently reverts to `scale=0`-only behavior — watering still skips, but `wtrestr` and restriction-labeled notifications go dark. The weather service's CI guard (`test/firmware-contract.spec.ts`) is the producer-side anchor for keeping `restricted` emitted; this section is the consumer-side record of the verified contract (GitHub issue #3).
 
 ## Dormant `scales` Capability
 
