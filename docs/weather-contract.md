@@ -24,7 +24,7 @@ The consumer only pulls these top-level keys today: `errCode`, `scale`, `restric
 
 - `errCode` is checked first. `scale` and `scales` are only applied when `wt_errCode == 0` (`weather.cpp:65-72`, `weather.cpp:143-149`).
 - Unknown top-level keys are tolerated because the parser ignores anything it never asks for, but they still consume scarce response bytes (`weather.cpp:65-149`, `opensprinkler_server.cpp:148-206`).
-- `rawData` is treated as an opaque blob: firmware copies it into `wt_rawData` and later exposes it through `/jc` as `wtdata`; it does not parse nested structure out of that field (`weather.cpp:137-139`, `opensprinkler_server.cpp:1273-1283`).
+- `rawData` is treated as an opaque blob: firmware copies it into `wt_rawData` and later exposes it through `/jc` as `wtdata`; it does not parse nested structure out of that field (`weather.cpp:137-139`, `opensprinkler_server.cpp:1273-1283`). `getweather_callback` writes `wt_rawData` only when `findKeyVal` succeeds and does not clear it when `rawData` is absent or oversize-discarded, so a successful response that omits `rawData` leaves the previous value latched and `/jc` keeps serving it. The buffer is zeroed only on the weather-success-timeout reset (`main.cpp:1227`) and the options reset (`opensprinkler_server.cpp:1708`) — not within the callback. Producers should treat `rawData` as latched between those resets and send it on every response where it is meaningful.
 - Consumer-side guidance inferred from that behavior: new structured producer data should ride inside the `rawData` JSON blob, not as new top-level fields. That preserves the fixed top-level parser while still allowing producer evolution.
 
 ## Watering Level Semantics

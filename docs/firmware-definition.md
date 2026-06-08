@@ -12,7 +12,7 @@
 
 Build targets (AVR/Arduino, ESP8266, OSPi/Linux, DEMO, `USE_OTF`, display/HTTPS/email variants) are selected by **preprocessor branches interleaved throughout** (`defines.h`, `OpenSprinkler.cpp:529`, `main.cpp:419`, `gpio.cpp`). **Zero automated tests.** Three parallel build systems (`platformio.ini`, `Makefile`, `mainArduino.ino`) + `Dockerfile`.
 
-**Weather-service boundary:** `weather.cpp:54` calls the remote weather server (`weather?.py`) and a flat, `&`-delimited callback **directly mutates** water level/scale, sunrise, sunset, external IP, timezone, rain delay, raw data, historical scales, and NVRAM via `os.weather_update_flag` bits. The schema is **implicit, unversioned, and only partially validated**, and is hard to test in isolation — it is the legacy contract the sibling OpenSprinkler-Weather service emits (which now also offers a cleaner versioned `/v1` JSON API).
+**Weather-service boundary:** `weather.cpp:160` (`GetWeather()`) calls the remote weather server (`weather?.py`); its flat, `&`-delimited callback at `weather.cpp:54` (`getweather_callback`) **directly mutates** water level/scale, sunrise, sunset, external IP, timezone, rain delay, raw data, historical scales, and NVRAM via `os.weather_update_flag` bits. The schema is **implicit, unversioned, and only partially validated**, and is hard to test in isolation — it is the legacy contract the sibling OpenSprinkler-Weather service emits (which now also offers a cleaner versioned `/v1` JSON API).
 
 ## Prioritized weaknesses
 
