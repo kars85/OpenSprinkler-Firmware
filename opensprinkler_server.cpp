@@ -1095,7 +1095,7 @@ void server_json_options_main() {
 		}
 		#endif
 
-		if (oid==IOPT_SEQUENTIAL_RETIRED || oid==IOPT_URS_RETIRED || oid==IOPT_RSO_RETIRED || oid==IOPT_RESERVE_7 || oid==IOPT_RESERVE_8) continue;
+		if (oid==IOPT_SEQUENTIAL_RETIRED || oid==IOPT_URS_RETIRED || oid==IOPT_RSO_RETIRED || oid==IOPT_RESERVE_8) continue; // IOPT_USE_WEATHER_V1 (formerly RESERVE_7) is now exposed
 
 #if defined(ARDUINO)
 		#if defined(ESP8266)

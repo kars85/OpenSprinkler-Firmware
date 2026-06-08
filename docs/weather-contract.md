@@ -88,6 +88,16 @@ Revisit retirement only if both sides agree to a coordinated, ordered change AND
 | `scales` | dormant | Optional 14-entry multiday scale array for interval programs; still parsed and exposed, but only if the producer sends it (`weather.h:35`, `weather.cpp:141-147`, `weather.cpp:288-311`, `main.cpp:891-899`). |
 | `rawData.*` | producer-owned | Nested structure is opaque to firmware. The producer may evolve this blob as long as the top-level `rawData` size contract is preserved (`weather.cpp:137-139`, `opensprinkler_server.cpp:1273-1283`). |
 
+## `/v1` JSON adoption (opt-in, non-AVR) — issue #2
+
+The firmware can consume the weather service's versioned `/v1/watering` JSON API instead of the legacy flat response, behind an **additive, opt-in** path that leaves the legacy parser untouched:
+
+- **Opt-in:** `IOPT_USE_WEATHER_V1` (`defines.h`, formerly `IOPT_RESERVE_7`; JSON name `uwtv1`). Default `0` = legacy flat path. Nonzero (non-AVR only) = try `/v1`, **fall back to legacy** on any failure (transport error, non-200, malformed/`error` body). AVR is excluded (`#if !defined(OS_AVR)`).
+- **Request:** `GET /v1/watering?loc=&method=0-3&fwv=` to `SOPT_WEATHERURL` (HTTPS default). Firmware weather methods 0–3 map 1:1 to `/v1` method ids; monthly(4) is converted to manual(0) before the call.
+- **Parsing:** a dedicated callback reads the **HTTP status line** (200 vs 4xx/5xx) — the legacy peel-and-discard path can't, so `/v1` uses its own callback — then ArduinoJson (v7) parses the body. `applyV1Weather()` reproduces the legacy effect-contract field-for-field (`weather.cpp` `getweather_callback`): `scale→IOPT_WATER_PERCENTAGE` (gated on success), `restricted→wt_restricted`, `rainDelay→rd`, and the time-field superset `tz/sunrise/sunset/eip→` their legacy targets; `raw→wt_rawData`.
+- **Producer dependency:** requires the `/v1/watering` **time-field superset** (`tz/sunrise/sunset/eip`) — OpenSprinkler-Weather `FR-P1.2a`, `getOsTimeFields`/`shapeWateringResponse`. Without it, those fields simply don't update in `/v1` mode (scale/rainDelay/restricted still do). `scales` is not carried by `/v1` (service no longer emits it); the dormant `md_scales` array is cleared on `/v1` success.
+- **Status:** experimental — compiles in CI on all non-AVR targets and is inert by default; **on-device validation required** before relying on it. See `OpenSprinkler-Weather` PR for the producer half.
+
 ## Maintenance Contract
 
 - The weather repo owns the canonical wire format.
