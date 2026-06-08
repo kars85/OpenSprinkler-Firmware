@@ -3,6 +3,12 @@
 name: Build CI and Release
 
 on:
+  # NOTE: on a fork, GitHub Actions does not auto-run this workflow for PRs.
+  # To build-verify a branch manually: Actions tab -> "Build CI and Release" -> "Run workflow"
+  # (or: gh workflow run "Build CI and Release" --ref <branch>).
+  # The "Build PlatformIO" and "Build Demo" jobs are the real compile checks;
+  # "Build Docker" may fail on a fork at the ghcr.io cache push (permissions) without
+  # indicating a code problem.
   workflow_dispatch:
   push:
     branches: [master]
