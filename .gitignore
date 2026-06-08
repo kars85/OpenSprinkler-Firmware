@@ -15,3 +15,7 @@ node_modules
 *.json
 !package.json
 .DS_Store
+
+# Local AI tooling / session artifacts (Claude Code, Octopus orchestration)
+.claude/
+.claude-octopus/
