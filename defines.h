@@ -281,7 +281,7 @@ enum {
 	IOPT_I_MIN_THRESHOLD,
 	IOPT_I_MAX_LIMIT,
 	IOPT_TARGET_PD_VOLTAGE,
-	IOPT_USE_WEATHER_V1,  // (was reserved 7) opt-in: consume the /v1 JSON weather API (non-AVR); 0=legacy flat (default), nonzero=/v1 with legacy fallback
+	IOPT_RESERVE_7,
 	IOPT_RESERVE_8,
 	IOPT_WIFI_MODE, //ro
 	IOPT_RESET,     //ro

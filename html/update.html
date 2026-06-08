@@ -103,18 +103,18 @@
     <form method='POST' action='/update' id='fm' enctype='multipart/form-data'>
         <div class="form-group">
             <label for="file">Firmware File (.bin)</label>
-            <input type='file' name='file' accept='.bin' id='file' required aria-describedby='warn'>
+            <input type='file' name='file' accept='.bin' id='file'>
         </div>
         <div class="form-group">
             <label for="pw">Device Password</label>
-            <input type='password' name='pw' id='pw' autocomplete='current-password'>
+            <input type='password' name='pw' id='pw'>
         </div>
 
-        <div class="warning-box" id='warn' role='note'>
+        <div class="warning-box">
             <b>IMPORTANT:</b> Firmware updates across major revisions (e.g., from 2.2.1 to 2.2.2) will trigger a factory reset. Please save a copy of your current configurations before proceeding.
         </div>
 
-        <p id='msg' role='status' aria-live='polite'></p>
+        <p id='msg'></p>
         <button type='button' id='btn_submit'>Upload Firmware</button>
     </form>
 </main>
