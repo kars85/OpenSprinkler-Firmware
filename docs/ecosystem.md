@@ -30,11 +30,11 @@ This repo (**OpenSprinkler-Firmware**, the controller) sits at the center of two
 ### C. Weather ↔ OTF — **no direct coupling** (intentional)
 The weather service does not use OTF, and OTF does not know about the weather service. They interact only *through* the firmware. Keep it that way.
 
-## External-facing contracts (informal — not yet codified)
-These couple the firmware to apps/integrations rather than to a sibling repo, but the same "don't break consumers" rule applies:
+## External-facing contracts → [`external-contracts.md`](external-contracts.md)
+These couple the firmware to apps/integrations/cloud rather than to a sibling repo, but the same "don't break consumers" rule applies. Now codified in [`external-contracts.md`](external-contracts.md):
 - **`fwv` (firmware version) negotiation** — the weather service and app key behavior off `fwv`; older firmware can't parse newer payloads.
 - **MQTT payload/topic shapes** (e.g. `{"state":"skipped","wtrestr":1}`) — Home Assistant and other integrators couple to these; changing `notifier.cpp` output can break them.
-- **OTC remote-station handshake** (`STN_TYPE_REMOTE_OTC`, OTC token in `/jc`).
+- **OTC remote access** — inbound cloud tunnel (`/socket/v1?deviceKey=`) and outbound remote-station control (`STN_TYPE_REMOTE_OTC` → `/forward/v1/<token>/cm`).
 
 ## The one rule
 **Before changing any behavior under "Coupled on," open the linked contract doc on the other side and update both together (and the CI guard / version pin where one exists).** That is what keeps a fix in one project from silently breaking another.
