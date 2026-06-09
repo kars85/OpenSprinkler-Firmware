@@ -72,6 +72,13 @@
 
 const char *user_agent_string = "OpenSprinkler/" TOSTRING(OS_FW_VERSION) "#" TOSTRING(OS_FW_MINOR);
 
+// Fork build banner (Tier 1): e.g. "OpenSprinkler 221(4)+kvm.1". OSF_FORK_ID is a
+// string literal so it is concatenated directly. __attribute__((used)) keeps the
+// string in the binary even in non-debug builds, so a flashed image stays
+// identifiable (grep the .bin) regardless of whether serial output is enabled.
+const char *fork_version_string __attribute__((used)) =
+	"OpenSprinkler " TOSTRING(OS_FW_VERSION) "(" TOSTRING(OS_FW_MINOR) ")+" OSF_FORK_ID "." TOSTRING(OSF_FORK_BUILD);
+
 void manual_start_program(unsigned char, unsigned char, unsigned char);
 
 // Small variations have been added to the timing values below
@@ -427,6 +434,7 @@ void do_setup() {
 
 	DEBUG_BEGIN(115200);
 	DEBUG_PRINTLN(F("started"));
+	DEBUG_PRINTLN(fork_version_string);
 
 	os.begin();          // OpenSprinkler init
 	os.options_setup();  // Setup options
@@ -497,6 +505,7 @@ void initialize_otf();
 
 void do_setup() {
 	initialiseEpoch();   // initialize time reference for millis() and micros()
+	DEBUG_PRINTLN(fork_version_string);
 	os.begin();          // OpenSprinkler init
 	os.options_setup();  // Setup options
 

@@ -37,6 +37,16 @@ typedef unsigned long ulong;
 
 #define OS_FW_MINOR      4  // Firmware minor version
 
+/** Fork identity (Tier 1) — additive build markers; these do NOT affect reset logic.
+ *  OS_FW_VERSION / OS_FW_MINOR above continue to track upstream exactly: the device
+ *  reset check (OpenSprinkler.cpp options_setup) and the /jo API depend on them.
+ *  OSF_FORK_* only identify THIS fork's build so a flashed image is distinguishable
+ *  from official firmware. Cadence: bump OSF_FORK_BUILD on every fork release that
+ *  ships a binary; reset it to 1 when rebasing onto a newer upstream base.
+ *  See docs/fork-versioning.md. */
+#define OSF_FORK_ID    "kvm"  // fork channel identifier (constant)
+#define OSF_FORK_BUILD    1   // fork build counter (per upstream base)
+
 /** Hardware version base numbers */
 #define OS_HW_VERSION_BASE   0x00 // OpenSprinkler
 #define OSPI_HW_VERSION_BASE 0x40 // OpenSprinkler Pi
