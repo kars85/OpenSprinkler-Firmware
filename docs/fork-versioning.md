@@ -8,14 +8,14 @@ never by repurposing the upstream version numbers.
 ## Version string format
 
 ```
-2.2.1(4)+kvm.1
-└──┬──┘ └┬┘ └┬┘
-   │     │   └─ fork build counter  (OSF_FORK_BUILD)
-   │     └───── fork channel id      (OSF_FORK_ID)
-   └─────────── exact upstream base this fork is rebased onto (OS_FW_VERSION / OS_FW_MINOR)
+2.2.1(4)+kars85.1
+└──┬──┘ └─┬──┘ └┬┘
+   │      │     └─ fork build counter  (OSF_FORK_BUILD)
+   │      └─────── fork channel id      (OSF_FORK_ID)
+   └────────────── exact upstream base this fork is rebased onto (OS_FW_VERSION / OS_FW_MINOR)
 ```
 
-At runtime the firmware prints `OpenSprinkler 221(4)+kvm.1` (the raw integer form of
+At runtime the firmware prints `OpenSprinkler 221(4)+kars85.1` (the raw integer form of
 the upstream base) — see `fork_version_string` in `main.cpp`.
 
 ## The macros (`defines.h`)
@@ -24,7 +24,7 @@ the upstream base) — see `fork_version_string` in `main.cpp`.
 |-------|-------|---------|
 | `OS_FW_VERSION` | upstream | Major version integer (221 = 2.2.1). **Drives the device-reset check** and the `/jo` API (`fwv`). Never edit except to match upstream. |
 | `OS_FW_MINOR` | upstream | Minor/build revision (the number in parentheses). Tracks upstream; surfaced as `fwm`. |
-| `OSF_FORK_ID` | fork | Constant fork channel identifier (e.g. `"kvm"`). |
+| `OSF_FORK_ID` | fork | Constant fork channel identifier (`"kars85"` — the GitHub handle / repo owner). |
 | `OSF_FORK_BUILD` | fork | Monotonic fork build counter, **relative to the current upstream base**. |
 
 ## Cadence rules
@@ -51,7 +51,7 @@ deliberate `OS_FW_MINOR` bump.
 
 ## Git tags
 
-Refname-safe form (no parentheses): `fw-<base>-<id><build>`, e.g. `fw-2.2.1.4-kvm1`.
+Refname-safe form (no parentheses): `fw-<base>-<id><build>`, e.g. `fw-2.2.1.4-kars85.1`.
 
 ## Tiers
 

@@ -44,7 +44,7 @@ typedef unsigned long ulong;
  *  from official firmware. Cadence: bump OSF_FORK_BUILD on every fork release that
  *  ships a binary; reset it to 1 when rebasing onto a newer upstream base.
  *  See docs/fork-versioning.md. */
-#define OSF_FORK_ID    "kvm"  // fork channel identifier (constant)
+#define OSF_FORK_ID    "kars85"  // fork channel identifier (constant; GitHub handle / repo owner)
 #define OSF_FORK_BUILD    1   // fork build counter (per upstream base)
 
 /** Hardware version base numbers */
