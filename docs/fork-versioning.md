@@ -56,8 +56,12 @@ Refname-safe form (no parentheses): `fw-<base>-<id><build>`, e.g. `fw-2.2.1.4-ka
 ## Tiers
 
 - **Tier 1 (implemented):** macros + boot banner (`fork_version_string`, printed in
-  `do_setup()`) + the string baked into the binary via `__attribute__((used))`.
-  Zero external-contract impact.
+  `do_setup()`). The string is retained in every build — including release builds where
+  `ENABLE_DEBUG` is off and the banner print compiles away — via a **live reference**:
+  `do_setup()` does a `volatile` store into `fork_version_keepalive`. `__attribute__((used))`
+  alone is insufficient because it doesn't set `SHF_GNU_RETAIN`, so `-fdata-sections` +
+  `--gc-sections` (the ESP8266/AVR default link) could otherwise reclaim the unreferenced
+  string. Zero external-contract impact.
 - **Tier 2 (optional, not yet done):** expose the fork id as a read-only `fwf` field
   in the `/jo` options JSON so apps/integrations can detect the fork at runtime. This
   is additive but an externally-observed shape change — document it in
