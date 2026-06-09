@@ -45,8 +45,8 @@ typedef unsigned long ulong;
  *  ships a binary; reset it to 1 when rebasing onto a newer upstream base.
  *  See docs/fork-versioning.md. */
 #define OSF_FORK_ID    "kars85"  // fork channel identifier (constant; GitHub handle / repo owner)
-#define OSF_FORK_BUILD    2   // fork build counter (per upstream base)
-// Combined fork tag, e.g. "kars85.2" — emitted as the /jo "fwf" field; mirrors the
+#define OSF_FORK_BUILD    3   // fork build counter (per upstream base)
+// Combined fork tag, e.g. "kars85.3" — emitted as the /jo "fwf" field; mirrors the
 // suffix of the boot banner string (fork_version_string in main.cpp).
 #define OSF_STRINGIFY_(x) #x
 #define OSF_STRINGIFY(x)  OSF_STRINGIFY_(x)
