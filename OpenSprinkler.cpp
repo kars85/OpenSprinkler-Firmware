@@ -2005,6 +2005,30 @@ void default_http_callback(char* buffer) {
 
 }
 
+#if !defined(OS_AVR)
+// Shared URL transport parser — see header for contract. Extracted from weather.cpp
+// (kars85.2 heuristic) so other outbound paths can reuse one audited implementation.
+char* OpenSprinkler::parse_url_transport(char* host, uint16_t* port, bool* use_ssl) {
+	char* host_start = host;
+	bool explicit_scheme = false;
+	*use_ssl = true;  // default to https
+	*port = 443;      // default to https port
+	if (strncmp_P(host, PSTR("http://"), 7) == 0) {
+		*use_ssl = false; *port = 80; host_start = host + 7; explicit_scheme = true;
+	} else if (strncmp_P(host, PSTR("https://"), 8) == 0) {
+		*use_ssl = true; *port = 443; host_start = host + 8; explicit_scheme = true;
+	}
+	char* colon = strchr(host_start, ':');
+	if (colon) {
+		*colon = '\0';  // null-terminate hostname
+		*port = atoi(colon + 1);
+		// scheme-less + explicit non-443 port -> assume plain HTTP (kars85.2 heuristic)
+		if (!explicit_scheme && *port != 443) *use_ssl = false;
+	}
+	return host_start;
+}
+#endif
+
 int8_t OpenSprinkler::send_http_request(const char* server, uint16_t port, char* p, void(*callback)(char*), bool usessl, uint16_t timeout) {
 
 	if(server == NULL || server[0]==0 || port==0 ) { // sanity checking
