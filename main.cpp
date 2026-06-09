@@ -74,7 +74,7 @@ const char *user_agent_string = "OpenSprinkler/" TOSTRING(OS_FW_VERSION) "#" TOS
 
 // Fork build banner (Tier 1): e.g. "OpenSprinkler 221(4)+kars85.1". OSF_FORK_ID is a
 // string literal so it is concatenated directly.
-const char *fork_version_string __attribute__((used)) =
+static const char *fork_version_string __attribute__((used)) =
 	"OpenSprinkler " TOSTRING(OS_FW_VERSION) "(" TOSTRING(OS_FW_MINOR) ")+" OSF_FORK_ID "." TOSTRING(OSF_FORK_BUILD);
 
 // Force-retain the banner in EVERY build so a flashed image stays grep-identifiable.
@@ -84,8 +84,9 @@ const char *fork_version_string __attribute__((used)) =
 // -fdata-sections + --gc-sections link (the ESP8266/AVR default) could still reclaim it.
 // do_setup() does a volatile store of this pointer — a side effect the compiler may not
 // elide — which is a live reference the linker must honor, guaranteeing retention across
-// toolchains rather than relying on incidental behavior.
-const char * volatile fork_version_keepalive;
+// toolchains rather than relying on incidental behavior. Both this and fork_version_string
+// are TU-local (used only here), so they take internal linkage (static) per PR #15 review.
+static const char * volatile fork_version_keepalive;
 
 void manual_start_program(unsigned char, unsigned char, unsigned char);
 

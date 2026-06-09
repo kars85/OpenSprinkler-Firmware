@@ -46,6 +46,11 @@ typedef unsigned long ulong;
  *  See docs/fork-versioning.md. */
 #define OSF_FORK_ID    "kars85"  // fork channel identifier (constant; GitHub handle / repo owner)
 #define OSF_FORK_BUILD    1   // fork build counter (per upstream base)
+// Combined fork tag, e.g. "kars85.1" — emitted as the /jo "fwf" field; mirrors the
+// suffix of the boot banner string (fork_version_string in main.cpp).
+#define OSF_STRINGIFY_(x) #x
+#define OSF_STRINGIFY(x)  OSF_STRINGIFY_(x)
+#define OSF_FORK_TAG      OSF_FORK_ID "." OSF_STRINGIFY(OSF_FORK_BUILD)
 
 /** Hardware version base numbers */
 #define OS_HW_VERSION_BASE   0x00 // OpenSprinkler
