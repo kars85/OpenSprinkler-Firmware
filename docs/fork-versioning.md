@@ -35,6 +35,13 @@ the upstream base) — see `fork_version_string` in `main.cpp`.
 | Rebase onto a **newer** upstream (e.g. upstream → 2.2.1(5)) | set `OS_FW_MINOR` (and `OS_FW_VERSION` if it moved) to match upstream, then **reset `OSF_FORK_BUILD` to 1** |
 | Make a change that alters NVM/options data layout | bump `OS_FW_MINOR` **deliberately** (accepting divergence from upstream's number) — this is the *only* knob that should ever force a settings wipe |
 
+## Build history
+
+| Build | Change |
+|-------|--------|
+| `kars85.1` | Initial fork build on upstream base 2.2.1(4): Tier 1 (markers, banner, gc-sections-safe retention, version-stamped CI artifact) + Tier 2 (read-only `/jo` `fwf`). |
+| `kars85.2` | Weather URL transport fix (`weather.cpp`): a scheme-less URL with an explicit non-443 port now defaults to plain HTTP, so a bare local weather URL like `10.10.100.3:3000` no longer silently defaults to HTTPS and fails the TLS handshake. Explicit `https://` and port 443 still select TLS. Supersedes `kars85.1` (includes all of its content). |
+
 ## Why the fork counter does not affect the reset logic
 
 `options_setup()` (`OpenSprinkler.cpp`) factory-resets only when the stored

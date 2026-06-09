@@ -195,16 +195,19 @@ void GetWeather() {
 #else
 	bool use_ssl = true;  // default to https
 	int port = 443;       // default to https port
+	bool explicit_scheme = false;
 
 	// Check for http:// or https://
 	if (strncmp_P(host, PSTR("http://"), 7) == 0) {
 		use_ssl = false;
 		port = 80;
 		host_start = host + 7;
+		explicit_scheme = true;
 	} else if (strncmp_P(host, PSTR("https://"), 8) == 0) {
 		use_ssl = true;
 		port = 443;
 		host_start = host + 8;
+		explicit_scheme = true;
 	}
 
 	// Check for explicit port number
@@ -212,6 +215,13 @@ void GetWeather() {
 	if (colon) {
 		*colon = '\0';  // null-terminate hostname
 		port = atoi(colon + 1);
+		// Fork (kars85): a scheme-less URL with an explicit non-443 port almost always
+		// denotes a local plain-HTTP weather server (e.g. a self-hosted OpenSprinkler-Weather
+		// on host:3000). Default such URLs to HTTP so they don't silently fail a TLS handshake
+		// and fail open. Explicit https:// (or port 443) still selects TLS. See docs/fork-versioning.md.
+		if (!explicit_scheme && port != 443) {
+			use_ssl = false;
+		}
 	}
 
 #endif
