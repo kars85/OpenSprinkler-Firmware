@@ -1213,12 +1213,16 @@ void server_view_scripturl(OTF_PARAMS_DEF) {
 	print_header(false);
 #endif
 	//bfill.emit_p(PSTR("<form name=of action=cu method=get><table cellspacing=12><tr><td><b>JavaScript</b>:</td><td><input type=text size=40 maxlength=$D value='$O' name=jsp></td></tr><tr><td>Default:</td><td>$S</td></tr><tr><td><b>Weather</b>:</td><td><input type=text size=40 maxlength=$D value='$O' name=wsp></td></tr><tr><td>Default:</td><td>$S</td></tr><tr><td><b>Password</b>:</td><td><input type=password size=32 name=pw> <input type=submit value=Submit></td></tr></table></form><script src=https://ui.opensprinkler.com/js/hasher.js></script>"),
-	bfill.emit_p(PSTR(R"(<form name=of action=cu method=get><table cellspacing=12>
-<tr><td><b>UI Source</b>:</td><td><input type=text size=40 maxlength=$D value='$O' id=jsp name=jsp></td></tr>
+	bfill.emit_p(PSTR(R"(<h2>Firmware Settings</h2>
+<p>Advanced device URLs. <a href=/update>Firmware update &rarr;</a> &middot; <a href=/>Home &rarr;</a></p>
+<form name=of action=cu method=get><table cellspacing=12>
+<tr><td><label for=jsp><b>UI Source</b></label>:</td><td><input type=text size=40 maxlength=$D value='$O' id=jsp name=jsp aria-describedby=jsph></td></tr>
+<tr><td></td><td><small id=jsph>URL of the web-app JavaScript. The default loads the official OpenSprinkler app; point it at a self-hosted copy to customize the interface.</small></td></tr>
 <tr><td></td><td><button type=button onclick='rst_jsp()'>Reset UI Source</button></td></tr>
-<tr><td><b>Weather</b>:</td><td><input type=text size=40 maxlength=$D value='$O' id=wsp name=wsp></td></tr>
+<tr><td><label for=wsp><b>Weather</b></label>:</td><td><input type=text size=40 maxlength=$D value='$O' id=wsp name=wsp aria-describedby=wsph></td></tr>
+<tr><td></td><td><small id=wsph>Weather service address. For a local server, include the scheme, e.g. <code>http://192.168.1.5:3000</code> (a bare host:port assumes HTTPS unless the port is non-443).</small></td></tr>
 <tr><td></td><td><button type=button onclick='rst_wsp()'>Reset Weather Server</button></td></tr>
-<tr><td><b>Password</b>:</td><td><input type=password size=32 name=pw><input type=submit value=submit></tr>
+<tr><td><label for=pw><b>Password</b></label>:</td><td><input type=password size=32 id=pw name=pw><input type=submit value=submit></tr>
 </table></form>
 <script src=https://ui.opensprinkler.com/js/hasher.js></script>
 <script>function rst_jsp() {document.getElementById('jsp').value='$S';}
