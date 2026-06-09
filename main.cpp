@@ -72,6 +72,21 @@
 
 const char *user_agent_string = "OpenSprinkler/" TOSTRING(OS_FW_VERSION) "#" TOSTRING(OS_FW_MINOR);
 
+// Fork build banner (Tier 1): e.g. "OpenSprinkler 221(4)+kars85.1". OSF_FORK_ID is a
+// string literal so it is concatenated directly.
+const char *fork_version_string __attribute__((used)) =
+	"OpenSprinkler " TOSTRING(OS_FW_VERSION) "(" TOSTRING(OS_FW_MINOR) ")+" OSF_FORK_ID "." TOSTRING(OSF_FORK_BUILD);
+
+// Force-retain the banner in EVERY build so a flashed image stays grep-identifiable.
+// In release builds ENABLE_DEBUG is undefined, so the DEBUG_PRINTLN(fork_version_string)
+// calls compile to {} and the string has no live reference. __attribute__((used)) only
+// forces the compiler to EMIT the symbol; it does not set SHF_GNU_RETAIN, so a
+// -fdata-sections + --gc-sections link (the ESP8266/AVR default) could still reclaim it.
+// do_setup() does a volatile store of this pointer — a side effect the compiler may not
+// elide — which is a live reference the linker must honor, guaranteeing retention across
+// toolchains rather than relying on incidental behavior.
+const char * volatile fork_version_keepalive;
+
 void manual_start_program(unsigned char, unsigned char, unsigned char);
 
 // Small variations have been added to the timing values below
@@ -427,6 +442,8 @@ void do_setup() {
 
 	DEBUG_BEGIN(115200);
 	DEBUG_PRINTLN(F("started"));
+	DEBUG_PRINTLN(fork_version_string);
+	fork_version_keepalive = fork_version_string;  // live ref: keep marker in release .bin
 
 	os.begin();          // OpenSprinkler init
 	os.options_setup();  // Setup options
@@ -497,6 +514,8 @@ void initialize_otf();
 
 void do_setup() {
 	initialiseEpoch();   // initialize time reference for millis() and micros()
+	DEBUG_PRINTLN(fork_version_string);
+	fork_version_keepalive = fork_version_string;  // live ref: keep marker in release .bin
 	os.begin();          // OpenSprinkler init
 	os.options_setup();  // Setup options
 
