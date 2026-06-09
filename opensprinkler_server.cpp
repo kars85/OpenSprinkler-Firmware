@@ -1119,6 +1119,10 @@ void server_json_options_main() {
 			bfill.emit_p(PSTR(","));
 	}
 
+	// Tier 2 fork identity: read-only "fwf" (fork tag, e.g. "kars85.1"). Computed from
+	// the OSF_FORK_* macros, NOT stored in iopts/NVM, so it cannot trigger a device reset
+	// and has no write-back path. Additive — see docs/fork-versioning.md / external-contracts.md.
+	bfill.emit_p(PSTR(",\"fwf\":\"$F\""), PSTR(OSF_FORK_TAG));
 	bfill.emit_p(PSTR(",\"dexp\":$D,\"mexp\":$D,\"hwt\":$D,"), os.detect_exp(), MAX_EXT_BOARDS, os.hw_type);
 
 	// print master array

@@ -17,6 +17,19 @@
 
 ---
 
+## 1a. `fwf` — fork build identity *(this fork only)*
+
+**What it is:** a read-only string that identifies which **fork build** is running, since `fwv`/`fwm` are identical to the upstream base this fork rebases onto and cannot distinguish a fork binary from official firmware. Value is `OSF_FORK_TAG` = `"<OSF_FORK_ID>.<OSF_FORK_BUILD>"`, e.g. `"kars85.1"` (`defines.h`).
+
+- **Exposed in the controller API:** reported as `fwf` in `/jo` (and `/ja`, which embeds the same options block) — emitted in the computed, non-stored field group alongside `dexp`/`mexp`/`hwt` (`opensprinkler_server.cpp` `server_json_options_main`). It is **not** an `iopts`/NVM value: it has no write-back path (`/co` only accepts indexed `iopts`) and cannot trigger a device reset.
+- **Not sent to the weather service.** `fwv` remains the only version field on weather polls; `fwf` is firmware/app-facing only.
+
+**Contract / who depends on it:** consumers that want to tell a fork build apart from official firmware (e.g. an app surfacing the running build, or update tooling). Absent on official OpenSprinkler firmware — consumers must treat a missing `fwf` as "not this fork."
+
+**What breaks if changed:** renaming/removing `fwf`, or changing the `"<id>.<build>"` shape, breaks any consumer keying on it. **Rule:** additive only; the tag format and the bump cadence are defined in [`fork-versioning.md`](fork-versioning.md). This is a fork-local field — it does **not** exist upstream, so do not assume official firmware will ever emit it.
+
+---
+
 ## 2. MQTT — topic scheme & payload shapes
 
 **Source:** `mqtt.cpp` (transport/topics) and `notifier.cpp` (`NOTIFY_*` event payloads).

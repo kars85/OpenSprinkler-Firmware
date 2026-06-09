@@ -58,7 +58,9 @@ Refname-safe form (no parentheses): `fw-<base>-<id><build>`, e.g. `fw-2.2.1.4-ka
 - **Tier 1 (implemented):** macros + boot banner (`fork_version_string`, printed in
   `do_setup()`) + the string baked into the binary via `__attribute__((used))`.
   Zero external-contract impact.
-- **Tier 2 (optional, not yet done):** expose the fork id as a read-only `fwf` field
-  in the `/jo` options JSON so apps/integrations can detect the fork at runtime. This
-  is additive but an externally-observed shape change — document it in
-  `docs/weather-contract.md` / the relevant contract before shipping.
+- **Tier 2 (implemented):** the fork tag (`OSF_FORK_TAG`, e.g. `kars85.1`) is exposed as
+  a read-only `fwf` field in the `/jo` options JSON (and `/ja`) so apps/integrations can
+  detect the fork at runtime. It is emitted in the computed, non-stored field group
+  (`opensprinkler_server.cpp` `server_json_options_main`), so it never touches NVM and
+  cannot trigger a reset. Additive and fork-local; documented in
+  [`external-contracts.md`](external-contracts.md) §1a and the API reference.
