@@ -371,6 +371,14 @@ public:
 	static int8_t send_http_request(uint32_t ip4, uint16_t port, char* p, void(*callback)(char*)=NULL, bool usessl=false, uint16_t timeout=5000);
 	static int8_t send_http_request(const char* server, uint16_t port, char* p, void(*callback)(char*)=NULL, bool usessl=false, uint16_t timeout=5000);
 	static int8_t send_http_request(char* server_with_port, char* p, void(*callback)(char*)=NULL, bool usessl=false, uint16_t timeout=5000);
+#if !defined(OS_AVR)
+	// Parse an optional http://https:// scheme and :port out of a URL string in place,
+	// returning a pointer to the bare host (past any scheme) and setting *port / *use_ssl.
+	// Scheme-less defaults to HTTPS:443, EXCEPT a scheme-less URL with an explicit non-443
+	// port defaults to plain HTTP (so bare local servers like host:3000 don't silently fail
+	// a TLS handshake). Extracted from weather.cpp (kars85). See docs/fork-versioning.md.
+	static char* parse_url_transport(char* host, uint16_t* port, bool* use_ssl);
+#endif
 
 	#if defined(USE_OTF)
 	static OTCConfig otc;
