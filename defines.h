@@ -38,8 +38,8 @@ typedef unsigned long ulong;
 #define OS_FW_MINOR      4  // Firmware minor version
 
 /** Fork identity (Tier 1) — additive build markers; these do NOT affect reset logic.
- *  OS_FW_VERSION / OS_FW_MINOR above continue to track upstream exactly: the device
- *  reset check (OpenSprinkler.cpp options_setup) and the /jo API depend on them.
+ *  OS_FW_VERSION is the stored compatibility epoch checked by options_setup.
+ *  OS_FW_MINOR is a reset-free minor/API capability revision; both are exposed by /jo.
  *  OSF_FORK_* only identify THIS fork's build so a flashed image is distinguishable
  *  from official firmware. Cadence: bump OSF_FORK_BUILD on every fork release that
  *  ships a binary; reset it to 1 when rebasing onto a newer upstream base.

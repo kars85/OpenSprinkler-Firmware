@@ -1,39 +1,40 @@
 # Fork versioning scheme
 
 This fork rebases onto upstream OpenSprinkler and layers its own changes on top.
-To keep fork builds distinguishable from official firmware **without** breaking
-upstream compatibility, the fork identity lives in dedicated, additive markers —
-never by repurposing the upstream version numbers.
+Fork provenance lives in dedicated, additive markers; the numeric firmware fields
+remain compatibility signals. In particular, `fwv` is the stored compatibility
+epoch and must never be bumped merely to identify a fork build.
 
 ## Version string format
 
 ```
-2.2.1(4)+kars85.1
+2.2.1(4)+kars85.3
 └──┬──┘ └─┬──┘ └┬┘
-   │      │     └─ fork build counter  (OSF_FORK_BUILD)
-   │      └─────── fork channel id      (OSF_FORK_ID)
-   └────────────── exact upstream base this fork is rebased onto (OS_FW_VERSION / OS_FW_MINOR)
+   │      │     └─ fork release counter       (OSF_FORK_BUILD)
+   │      └─────── fork provenance/channel    (OSF_FORK_ID)
+   └────────────── compatibility epoch + reset-free capability (OS_FW_VERSION / OS_FW_MINOR)
 ```
 
-At runtime the firmware prints `OpenSprinkler 221(4)+kars85.1` (the raw integer form of
-the upstream base) — see `fork_version_string` in `main.cpp`.
+At runtime the current firmware prints `OpenSprinkler 221(4)+kars85.3` — see
+`fork_version_string` in `main.cpp`.
 
 ## The macros (`defines.h`)
 
 | Macro | Owner | Meaning |
 |-------|-------|---------|
-| `OS_FW_VERSION` | upstream | Major version integer (221 = 2.2.1). **Drives the device-reset check** and the `/jo` API (`fwv`). Never edit except to match upstream. |
-| `OS_FW_MINOR` | upstream | Minor/build revision (the number in parentheses). Tracks upstream; surfaced as `fwm`. |
+| `OS_FW_VERSION` | upstream / storage contract | Compatibility/storage epoch integer (`221` = 2.2.1), surfaced as `fwv`. It is the **only version field checked by the settings-reset path**. Never change it for a fork feature or build identifier. |
+| `OS_FW_MINOR` | upstream + fork compatibility | Reset-free minor/capability revision (the number in parentheses), surfaced as `fwm`. `iopts_load()` refreshes it after loading settings; it does not participate in reset detection. |
 | `OSF_FORK_ID` | fork | Constant fork channel identifier (`"kars85"` — the GitHub handle / repo owner). |
-| `OSF_FORK_BUILD` | fork | Monotonic fork build counter, **relative to the current upstream base**. |
+| `OSF_FORK_BUILD` | fork | Monotonic fork release counter, **relative to the current compatibility base**. It is provenance, not a capability signal. |
 
 ## Cadence rules
 
 | Event | Action |
 |-------|--------|
-| Ship a new fork binary on the **same** upstream base | `OSF_FORK_BUILD++` |
-| Rebase onto a **newer** upstream (e.g. upstream → 2.2.1(5)) | set `OS_FW_MINOR` (and `OS_FW_VERSION` if it moved) to match upstream, then **reset `OSF_FORK_BUILD` to 1** |
-| Make a change that alters NVM/options data layout | bump `OS_FW_MINOR` **deliberately** (accepting divergence from upstream's number) — this is the *only* knob that should ever force a settings wipe |
+| Ship a behavior-only fork binary with no new consumer-visible capability | `OSF_FORK_BUILD++` only. |
+| Add a backward-compatible API field or behavior that consumers must detect | Raise `OS_FW_MINOR` to the next documented capability level and bump `OSF_FORK_BUILD`; do **not** change `OS_FW_VERSION`. Consumers must also require `fwf` identity and field presence. The current floor is `2214`; the first future fork capability floor is `2215`. |
+| Rebase onto a newer upstream | Adopt the upstream `OS_FW_VERSION`; set `OS_FW_MINOR` no lower than the upstream revision or any already-shipped fork capability floor, document the result, and reset `OSF_FORK_BUILD` to `1`. |
+| Make an incompatible NVM/options layout change | Treat it as a new storage epoch: design a migration or an explicit reset plan before deliberately changing `OS_FW_VERSION`. `OS_FW_MINOR` never forces a wipe. |
 
 ## Build history
 
@@ -46,16 +47,16 @@ the upstream base) — see `fork_version_string` in `main.cpp`.
 ## Why the fork counter does not affect the reset logic
 
 `options_setup()` (`OpenSprinkler.cpp`) factory-resets only when the stored
-`OS_FW_VERSION` integer differs from the running firmware, or the `DONE` marker file
-is missing. `OSF_FORK_BUILD` is intentionally excluded: a fork rev must **not** wipe a
-user's settings. Only a real data-structure change should, and that is gated on a
-deliberate `OS_FW_MINOR` bump.
+`IOPT_FW_VERSION` differs from the running `OS_FW_VERSION`, or the `DONE` marker file
+is missing. Neither `OS_FW_MINOR` nor `OSF_FORK_BUILD` participates. After a normal
+load, `iopts_load()` overwrites the in-memory `fwm` value with the running
+`OS_FW_MINOR`, which makes `fwm` safe for additive capability gates without wiping
+settings.
 
-> **Footgun to be aware of:** because the fork keeps `OS_FW_VERSION`/`OS_FW_MINOR`
-> identical to the upstream base, a device cannot distinguish a fork build from
-> official firmware by `fwv`/`fwm` alone. Flashing between fork and official builds of
-> the same base will therefore *not* auto-reset settings even though the binaries
-> differ. Use the fork markers (boot banner / artifact name) to tell them apart.
+> **Footgun to be aware of:** `fwv` and `fwm` describe compatibility, not provenance.
+> They cannot prove that a binary is this fork, even when a fork capability happens to
+> use a distinct `fwm`. Use `fwf` (and the boot banner/artifact name) for fork identity.
+> Flashing between compatible fork and official builds does not auto-reset settings.
 
 ## Git tags
 
@@ -75,4 +76,4 @@ Refname-safe form (no parentheses): `fw-<base>-<id><build>`, e.g. `fw-2.2.1.4-ka
   detect the fork at runtime. It is emitted in the computed, non-stored field group
   (`opensprinkler_server.cpp` `server_json_options_main`), so it never touches NVM and
   cannot trigger a reset. Additive and fork-local; documented in
-  [`external-contracts.md`](external-contracts.md) §1a and the API reference.
+  [`external-contracts.md`](external-contracts.md) §1b and the API reference.
