@@ -22,9 +22,13 @@ function enable_i2c {
 
 DEBUG=""
 DEMO_AUTH_FLAG=""
+DEMO_PORT_FLAG=""
 
 if [ "${DEMO_AUTH_TEST:-0}" = "1" ]; then
 	DEMO_AUTH_FLAG="-DDEMO_AUTH_TEST"
+fi
+if [ -n "${DEMO_HTTP_PORT:-}" ]; then
+	DEMO_PORT_FLAG="-DHTTP_PORT=${DEMO_HTTP_PORT}"
 fi
 
 while getopts ":s:d" opt; do
@@ -58,7 +62,7 @@ if [ "$1" == "demo" ]; then
 
     ws=$(ls external/TinyWebsockets/tiny_websockets_lib/src/*.cpp)
     otf=$(ls external/OpenThings-Framework-Firmware-Library/*.cpp)
-    g++ -o OpenSprinkler -DDEMO $DEMO_AUTH_FLAG -DSMTP_OPENSSL $DEBUG -std=c++14 -include string.h -include cstdint main.cpp OpenSprinkler.cpp program.cpp opensprinkler_server.cpp utils.cpp weather.cpp gpio.cpp mqtt.cpp notifier.cpp smtp.c RCSwitch.cpp -Iexternal/TinyWebsockets/tiny_websockets_lib/include $ws -Iexternal/OpenThings-Framework-Firmware-Library/ $otf -lpthread -lmosquitto -lssl -lcrypto
+    g++ -o OpenSprinkler -DDEMO $DEMO_AUTH_FLAG $DEMO_PORT_FLAG -DSMTP_OPENSSL $DEBUG -std=c++14 -include string.h -include cstdint main.cpp OpenSprinkler.cpp program.cpp opensprinkler_server.cpp utils.cpp weather.cpp gpio.cpp mqtt.cpp notifier.cpp smtp.c RCSwitch.cpp -Iexternal/TinyWebsockets/tiny_websockets_lib/include $ws -Iexternal/OpenThings-Framework-Firmware-Library/ $otf -lpthread -lmosquitto -lssl -lcrypto
 else
 	echo "Installing required libraries..."
 	apt-get update
