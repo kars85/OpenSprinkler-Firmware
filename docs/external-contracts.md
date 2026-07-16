@@ -1,4 +1,4 @@
-# External-facing contracts — `fwv`, MQTT, OTC
+# External-facing contracts — firmware identity, MQTT, OTC
 
 > These are shapes the firmware exposes to **external consumers** (the weather service, the mobile/web app, MQTT integrations like Home Assistant, and the OpenThings Cloud) rather than to a single sibling repo. They were previously informal; this records them so a change here doesn't silently break a consumer. See the [ecosystem map](ecosystem.md) for the repo-to-repo couplings.
 
@@ -9,7 +9,7 @@
 **What it is:** the firmware advertises its version so producers/clients can branch on capability.
 
 - **Outbound to the weather service:** every weather poll includes `&fwv=<IOPT_FW_VERSION>` (`weather.cpp:167-171`). The value is `OS_FW_VERSION` (`221` = 2.2.1, `defines.h:34`).
-- **Exposed in the controller API:** reported as `fwv` in `/jo`/`/jc` (`opensprinkler_server.cpp:1373`), and emitted even when a password check fails for `/jo`/`/ja` so clients can detect version pre-auth (`opensprinkler_server.cpp:412-413,2442`).
+- **Exposed in the controller API:** reported in `/jo` and `/ja.options`, and emitted as the only top-level field when a password check fails for `/jo` or `/ja`, so clients can detect the version pre-auth (`opensprinkler_server.cpp:388-420,1140-1150,2088-2112`). It is not a `/jc` field.
 
 **Contract / who depends on it:** the OpenSprinkler-Weather service and the app may key behavior on `fwv` (older firmware can't parse newer response shapes — this is the safety valve behind the weather wire contract). 
 
@@ -17,11 +17,17 @@
 
 ---
 
-## 1a. `fwf` — fork build identity *(this fork only)*
+## 1a. `fwm` — reset-free capability revision
 
-**What it is:** a read-only string that identifies which **fork build** is running, since `fwv`/`fwm` are identical to the upstream base this fork rebases onto and cannot distinguish a fork binary from official firmware. Value is `OSF_FORK_TAG` = `"<OSF_FORK_ID>.<OSF_FORK_BUILD>"`, e.g. `"kars85.1"` (`defines.h`).
+**What it is:** the read-only minor/capability component paired with `fwv` in `/jo` and `/ja.options`. Unlike `fwv`, it is not checked by `options_setup()` and does not force a settings reset. Fork consumers use a documented `fwm` floor together with `fwf` identity and field presence; they never treat `fwm` alone as provenance.
 
-- **Exposed in the controller API:** reported as `fwf` in `/jo` (and `/ja`, which embeds the same options block) — emitted in the computed, non-stored field group alongside `dexp`/`mexp`/`hwt` (`opensprinkler_server.cpp` `server_json_options_main`). It is **not** an `iopts`/NVM value: it has no write-back path (`/co` only accepts indexed `iopts`) and cannot trigger a device reset.
+---
+
+## 1b. `fwf` — fork build identity *(this fork only)*
+
+**What it is:** a read-only string that identifies which **fork build** is running. `fwv` and `fwm` describe compatibility and cannot prove provenance. Value is `OSF_FORK_TAG` = `"<OSF_FORK_ID>.<OSF_FORK_BUILD>"`, e.g. `"kars85.3"` (`defines.h`).
+
+- **Exposed in the controller API:** reported as `fwf` in `/jo` (and `/ja`, which embeds the same options block) — emitted in the computed, non-stored field group alongside `dexp`/`mexp`/`hwt` (`opensprinkler_server.cpp` `server_json_options_main`). It is **not** an `iopts`/NVM value: `/co` has no `fwf` write path and skips the read-only version iopts, so `fwf` cannot trigger a device reset.
 - **Not sent to the weather service.** `fwv` remains the only version field on weather polls; `fwf` is firmware/app-facing only.
 
 **Contract / who depends on it:** consumers that want to tell a fork build apart from official firmware (e.g. an app surfacing the running build, or update tooling). Absent on official OpenSprinkler firmware — consumers must treat a missing `fwf` as "not this fork."

@@ -390,7 +390,7 @@ boolean process_password(OTF_PARAMS_DEF, boolean fwv_on_fail=false)
 boolean check_password(char *p)
 #endif
 {
-#if defined(DEMO)
+#if defined(DEMO) && !defined(DEMO_AUTH_TEST)
 	return true;
 #endif
 	if (os.iopts[IOPT_IGNORE_PASSWORD])  return true;
