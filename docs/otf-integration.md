@@ -20,6 +20,21 @@ On the firmware's supported OTF targets — **ESP8266, OSPi/Linux, and the nativ
 | Shared buffer | `ether_buffer` / `ETHER_BUFFER_SIZE` passed as OTF's header buffer | `HEADERS_BUFFER_SIZE` default 1024 (`OpenThingsFramework.h`) |
 | OTC cloud config | `otc.en/token/server/port`, defaults `ws.cloud.openthings.io` (`defines.h:161-163`) | `/socket/v1?deviceKey=` tunnel |
 
+## Phase 0 revision record
+
+The intended fork revision for the later single-revision build/pin is
+`kars85/OpenThings-Framework-Firmware-Library@75fe760187ac932e56876e1954540089686d6082`
+(`library.json` version `0.2.1`), verified against the fork's `origin/master` on
+2026-07-16.
+
+This is a review candidate, **not a dependency change**. Current consumption remains
+split: native DEMO/Linux uses the upstream submodule gitlink
+`OpenThingsIO/OpenThings-Framework-Firmware-Library@4e93061538da197e1820c7b325a3c996ff7851ea`,
+while ESP8266 uses the mutable upstream PlatformIO constraint `^0.2.0`; its exact
+resolved commit is not locked in this repository. Before either dependency file moves,
+the candidate above must pass both ESP8266 and retained DEMO builds from the same
+revision. That measured pin is Phase 4 work.
+
 ## What can break, and how
 - **Changing an OTF handler signature, `Request`/`Response` API, or `on()`** in the library breaks **every** web endpoint here (they all use `OTF_PARAMS_DEF`). Coordinate via the library's `ARCHITECTURE.md`.
 - **Changing the OTF constraint or resolved revision** must be validated against the handler/`Request`/`Response` API and recorded deliberately.
