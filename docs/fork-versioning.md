@@ -23,7 +23,7 @@ the upstream base) — see `fork_version_string` in `main.cpp`.
 | Macro | Owner | Meaning |
 |-------|-------|---------|
 | `OS_FW_VERSION` | upstream | Major version integer (221 = 2.2.1). **Drives the device-reset check** and the `/jo` API (`fwv`). Never edit except to match upstream. |
-| `OS_FW_MINOR` | upstream | Minor/build revision (the number in parentheses). Tracks upstream; surfaced as `fwm`. |
+| `OS_FW_MINOR` | upstream | Minor/build revision (the number in parentheses). Tracks upstream; surfaced as `fwm` and copied into the loaded option array, but **is not compared by the device-reset check**. |
 | `OSF_FORK_ID` | fork | Constant fork channel identifier (`"kars85"` — the GitHub handle / repo owner). |
 | `OSF_FORK_BUILD` | fork | Monotonic fork build counter, **relative to the current upstream base**. |
 
@@ -33,7 +33,7 @@ the upstream base) — see `fork_version_string` in `main.cpp`.
 |-------|--------|
 | Ship a new fork binary on the **same** upstream base | `OSF_FORK_BUILD++` |
 | Rebase onto a **newer** upstream (e.g. upstream → 2.2.1(5)) | set `OS_FW_MINOR` (and `OS_FW_VERSION` if it moved) to match upstream, then **reset `OSF_FORK_BUILD` to 1** |
-| Make a change that alters NVM/options data layout | bump `OS_FW_MINOR` **deliberately** (accepting divergence from upstream's number) — this is the *only* knob that should ever force a settings wipe |
+| Make a change that alters NVM/options data layout | coordinate a new persisted-storage epoch and bump `OS_FW_VERSION` (or add an explicit migration/reset path). Changing `OS_FW_MINOR` alone does **not** force a settings wipe. |
 
 ## Build history
 
@@ -48,8 +48,10 @@ the upstream base) — see `fork_version_string` in `main.cpp`.
 `options_setup()` (`OpenSprinkler.cpp`) factory-resets only when the stored
 `OS_FW_VERSION` integer differs from the running firmware, or the `DONE` marker file
 is missing. `OSF_FORK_BUILD` is intentionally excluded: a fork rev must **not** wipe a
-user's settings. Only a real data-structure change should, and that is gated on a
-deliberate `OS_FW_MINOR` bump.
+user's settings. `OS_FW_MINOR` is also absent from this comparison; after loading the
+stored options, firmware overwrites the in-memory `IOPT_FW_MINOR` value with the
+compiled `OS_FW_MINOR`. Only a coordinated persisted-data compatibility change should
+use a new `OS_FW_VERSION` storage epoch or an explicit migration/reset path.
 
 > **Footgun to be aware of:** because the fork keeps `OS_FW_VERSION`/`OS_FW_MINOR`
 > identical to the upstream base, a device cannot distinguish a fork build from
