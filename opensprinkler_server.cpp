@@ -390,7 +390,7 @@ boolean process_password(OTF_PARAMS_DEF, boolean fwv_on_fail=false)
 boolean check_password(char *p)
 #endif
 {
-#if defined(DEMO)
+#if defined(DEMO) && !defined(DEMO_AUTH_TEST) // CI can opt into the production auth path
 	return true;
 #endif
 	if (os.iopts[IOPT_IGNORE_PASSWORD])  return true;
@@ -2264,6 +2264,11 @@ URLHandler urls[] = {
 	//server_fill_files,
 #endif
 };
+
+static_assert((sizeof(_url_keys) - 1) % 2 == 0,
+	"each firmware route key must contain exactly two characters");
+static_assert((sizeof(_url_keys) - 1) / 2 == sizeof(urls) / sizeof(urls[0]),
+	"firmware route keys and handlers must remain aligned");
 
 // handle Ethernet request
 #if defined(ESP8266)

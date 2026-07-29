@@ -94,8 +94,11 @@ jobs:
       - name: Build Script
         run: sudo ./build.sh -s demo
 
-      - name: Build Script
-        run: sudo ./build.sh -s demo
+      - name: Build authenticated contract fixture
+        run: sudo env DEMO_AUTH_TEST=1 DEMO_HTTP_PORT=18080 ./build.sh -s demo
+
+      - name: Test modern App firmware contract
+        run: python3 tests/firmware_contract_smoke.py --binary ./OpenSprinkler --port 18080
 
   build-docker:
     name: Build Docker
