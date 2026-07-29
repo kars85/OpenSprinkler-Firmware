@@ -3,14 +3,14 @@
 > **Consumer-side pointer.** The firmware's HTTP server and OpenThings Cloud remote-access layer are provided by the **OpenThings-Framework-Firmware-Library** (OTF), a compile-time dependency. The **canonical, source-grounded reference is `ARCHITECTURE.md` in the OpenThings-Framework-Firmware-Library repo** — read it before changing anything below. This file is the firmware-side record of the coupling so a change here (or an OTF version bump) doesn't silently break the other side. See also the [ecosystem map](ecosystem.md).
 
 ## What OTF provides to this firmware
-On all **non-AVR** targets (ESP8266 / ESP32 / OSPi-Linux), OTF is the controller's entire web layer: the local HTTP server, the request router, and the optional OpenThings Cloud (OTC) WebSocket reverse-tunnel for remote access. AVR builds exclude it.
+On the configured OTF targets—**ESP8266 and OSPi/Linux** (including the native DEMO build)—OTF is the controller's entire web layer: the local HTTP server, the request router, and the optional OpenThings Cloud (OTC) WebSocket reverse-tunnel for remote access. AVR builds exclude it. The generic preprocessor gate defines `USE_OTF` for a non-AVR compilation, but this repository has no ESP32 PlatformIO environment or other ESP32 build target, so ESP32 support is neither claimed nor tested here.
 
 ## Coupling points (what to check before changing)
 
 | Coupling | Firmware site | OTF / contract |
 |---|---|---|
 | Dependency + version pin | `platformio.ini:24` (`OpenThingsIO/OpenThings-Framework-Firmware-Library @ ^0.2.0`) | bumping the major version can break the API below |
-| Build gating | `USE_OTF` (`defines.h:177-178`) — defined for all non-AVR | OTF is excluded on AVR |
+| Build gating | `USE_OTF` (`defines.h:190-195`) — generic non-AVR gate; configured targets are ESP8266 and Linux/DEMO (`platformio.ini:15-70`) | OTF is excluded on AVR; no ESP32 target is defined here |
 | Header / global handle | `OpenSprinkler.h:48,66,122` (`extern OTF::OpenThingsFramework *otf;`) | `OpenThingsFramework.h` |
 | Instantiation (local vs cloud) | `OpenSprinkler.cpp:543/546` (ESP), `:751/754` (Linux) | constructors in `OpenThingsFramework.h:84,104,107` |
 | Handler API | `OTF_PARAMS_DEF` = `const OTF::Request &req, OTF::Response &res` (`opensprinkler_server.cpp:35`) | `Request.h` / `Response.h` |

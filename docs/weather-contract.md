@@ -38,15 +38,19 @@ The consumer only pulls these top-level keys today: `errCode`, `scale`, `restric
 **Firmware behavior (verified against source — no firmware change required for the core contract):**
 
 - **Parse — PASS.** `getweather_callback` reads `restricted` into `wt_restricted` via `findKeyVal`, and resets `wt_restricted = 0` when the key is absent (`weather.cpp:82-86`). This parse is **unconditional w.r.t. `errCode`** — unlike `scale`, which is gated by `wt_errCode == 0` (`weather.cpp:72`).
-- **Watering suppression — PASS (requires `prog.use_weather`).** Scheduling forces `wl = 0` when `wt_restricted > 0` for weather-enabled programs (`main.cpp:887-888`); `wl = 0` scales `water_time` to `0` (`main.cpp:917`), so no station is queued (`main.cpp:922/925`).
-- **Status surface — PASS.** `/jc` emits `"wtrestr":wt_restricted` (`opensprinkler_server.cpp:1273/1282`).
-- **Skip notification — PARTIAL (best-effort labeling, two pre-existing limits).** A fully-skipped program emits `notif.add(NOTIFY_PROGRAM_SCHED, pid, -1, wt_restricted)` (`main.cpp:941`); `notifier.cpp` then publishes MQTT `{"state":"skipped","wtrestr":<bval>}` and appends *"due to weather restriction."* to IFTTT/email only when `bval > 0` (`notifier.cpp:378-392`). Caveats:
-  1. **`match_found` is cumulative per minute, not per program** (`main.cpp:862`, set at `:931`, never reset in the `for(pid…)` loop). If any earlier program queued a station that minute, a later *restricted* weather program takes the scheduled branch (`main.cpp:938-939`) and reports `{"state":1,"wl":0}` instead of the `wtrestr` skip — the restriction label is lost in multi-program minutes.
-  2. **The skip branch passes the global `wt_restricted` regardless of `prog.use_weather`** (`main.cpp:941`), so a non-weather program skipped for an unrelated reason during an active restriction can be mislabeled *"due to weather restriction."*
+- **Watering suppression — PASS (requires `prog.use_weather`).** Scheduling forces `wl = 0` when `wt_restricted > 0` for weather-enabled programs (`main.cpp:905-920`); `wl = 0` scales `water_time` to `0` (`main.cpp:936-943`), so no station is queued.
+- **Status surface — PASS.** `/jc` emits `"wtrestr":wt_restricted` (`opensprinkler_server.cpp:1281-1291`).
+- **Skip notification — PASS (per-program attribution).** The scheduler initializes
+  `prog_queued = false` inside each matched program, sets it only when that program
+  successfully queues a station, and uses it for that program's scheduled-versus-skipped
+  notification (`main.cpp:924`, `main.cpp:953`, `main.cpp:960-967`). A different program
+  queued in the same minute therefore cannot hide this program's skip. The skipped branch
+  passes `wt_restricted` only when the skipped program has `prog.use_weather`; unrelated
+  non-weather skips carry `wtrestr=0`. `notifier.cpp` publishes MQTT
+  `{"state":"skipped","wtrestr":<0|1>}` and appends *"due to weather restriction."*
+  to IFTTT/email only for a positive restriction value (`notifier.cpp:375-407`).
 
-  These are latent firmware notification behaviors, **not** regressions from the producer change. They do not affect watering suppression or `/jc` status. Hardening them (reset `match_found` per program; gate the restriction label on `prog.use_weather`) would be an optional firmware change, out of scope for the verification.
-
-**Edge cases (verified):** `restricted` is parsed even when `errCode != 0` (so a stale value can't persist — it is reset to `0` when absent); the weather-success-timeout reset zeroes `wt_restricted` (along with `wl→100`) for non-manual methods (`main.cpp:1224-1229`), so a restriction self-clears if the service stops responding (fail-open).
+**Edge cases (verified):** `restricted` is parsed even when `errCode != 0` (so a stale value can't persist — it is reset to `0` when absent); the weather-success-timeout reset zeroes `wt_restricted` (along with `wl→100`) for non-manual methods (`main.cpp:1243-1255`), so a restriction self-clears if the service stops responding (fail-open).
 
 **Regression guard:** if the producer stops emitting top-level `restricted`, the controller silently reverts to `scale=0`-only behavior — watering still skips, but `wtrestr` and restriction-labeled notifications go dark. The weather service's CI guard (`test/firmware-contract.spec.ts`) is the producer-side anchor for keeping `restricted` emitted; this section is the consumer-side record of the verified contract (GitHub issue #3).
 
@@ -78,7 +82,7 @@ Revisit retirement only if both sides agree to a coordinated, ordered change AND
 | --- | --- | --- |
 | `errCode` | required | Gates success handling and whether `scale`/`scales` are applied; `0` updates `checkwt_success_lasttime` (`weather.cpp:65-72`, `weather.cpp:143-149`). |
 | `scale` | required | Accepts `0..250`; updates `IOPT_WATER_PERCENTAGE`; `0` skips watering without firmware changes (`weather.cpp:72-79`, `main.cpp:886-943`). |
-| `restricted` | optional-parsed | Drives `wt_restricted`, `wtrestr`, restriction-aware skips, and restriction-specific notifications when present (`weather.cpp:82-86`, `main.cpp:887-900`, `opensprinkler_server.cpp:1273-1283`, `notifier.cpp:375-407`). |
+| `restricted` | optional-parsed | Drives `wt_restricted`, `wtrestr`, restriction-aware skips, and correctly attributed per-program notifications when present (`weather.cpp:82-86`, `main.cpp:905-967`, `opensprinkler_server.cpp:1281-1291`, `notifier.cpp:375-407`). |
 | `sunrise` | optional-parsed | Updates `nvdata.sunrise_time` when `0..1440` and changed (`weather.cpp:88-95`). |
 | `sunset` | optional-parsed | Updates `nvdata.sunset_time` when `0..1440` and changed (`weather.cpp:97-104`). |
 | `eip` | optional-parsed | Updates stored external IP when changed (`weather.cpp:106-113`). |
