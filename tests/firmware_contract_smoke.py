@@ -91,7 +91,7 @@ def validate_controller(value: Any) -> dict[str, Any]:
 	return controller
 
 
-def validate_options(value: Any, expected_fwf: str) -> dict[str, Any]:
+def validate_options(value: Any, expected_fwm: int, expected_fwf: str) -> dict[str, Any]:
 	options = require_object(value, "/jo")
 	require_keys(options, (
 		"fwv", "fwm", "fwf", "hwv", "hwt", "mexp", "tz", "hp0", "hp1", "sdt",
@@ -101,7 +101,8 @@ def validate_options(value: Any, expected_fwf: str) -> dict[str, Any]:
 	), "/jo")
 	require(options["fwv"] == SUPPORTED_FWV,
 		f"/jo.fwv must remain the upstream-compatible App epoch {SUPPORTED_FWV}")
-	require_int(options["fwm"], "/jo.fwm", MIN_SUPPORTED_FWM)
+	require(options["fwm"] == expected_fwm,
+		f"/jo.fwm must equal the OS_FW_MINOR build identity {expected_fwm}")
 	require(options["fwf"] == expected_fwf, f"/jo.fwf must equal {expected_fwf!r}")
 	for key in ("hwv", "hwt", "mexp", "tz", "hp0", "hp1", "wl", "uwt", "sn1t"):
 		require_int(options[key], f"/jo.{key}")
@@ -267,7 +268,7 @@ def exercise_contract(repo: Path, binary: Path, port: int) -> None:
 				require(status == 200, f"/{endpoint} success must return HTTP 200")
 				responses[endpoint] = payload
 
-			options = validate_options(responses["jo"], expected_fwf)
+			options = validate_options(responses["jo"], fwm, expected_fwf)
 			controller = validate_controller(responses["jc"])
 			stations = validate_stations(responses["jn"])
 			station_count = len(stations["snames"])
@@ -280,7 +281,7 @@ def exercise_contract(repo: Path, binary: Path, port: int) -> None:
 
 			aggregate = require_object(responses["ja"], "/ja")
 			require_keys(aggregate, ("settings", "programs", "options", "status", "stations"), "/ja")
-			aggregate_options = validate_options(aggregate["options"], expected_fwf)
+			aggregate_options = validate_options(aggregate["options"], fwm, expected_fwf)
 			aggregate_controller = validate_controller(aggregate["settings"])
 			aggregate_stations = validate_stations(aggregate["stations"])
 			aggregate_count = len(aggregate_stations["snames"])
