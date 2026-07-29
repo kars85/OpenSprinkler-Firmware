@@ -234,6 +234,25 @@ jobs:
       name: firmware-release
       url: ${{ github.event.release.html_url }}
     steps:
+      - name: Checkout validated release source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          ref: ${{ needs.validate-release.outputs.source_sha }}
+
+      - name: Revalidate release tag after approval
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ needs.validate-release.outputs.release_tag }}
+          SOURCE_SHA: ${{ needs.validate-release.outputs.source_sha }}
+        run: |
+          git fetch --force --no-tags origin "refs/tags/${RELEASE_TAG}:refs/release-verification/tag"
+          current_sha=$(git rev-parse 'refs/release-verification/tag^{commit}')
+          if [[ "$current_sha" != "$SOURCE_SHA" ]]; then
+            echo "Release tag moved from $SOURCE_SHA to $current_sha while awaiting approval." >&2
+            exit 1
+          fi
+
       - name: Download firmware
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
@@ -271,6 +290,19 @@ jobs:
         with:
           persist-credentials: false
           ref: ${{ needs.validate-release.outputs.source_sha }}
+
+      - name: Revalidate release tag after approval
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ needs.validate-release.outputs.release_tag }}
+          SOURCE_SHA: ${{ needs.validate-release.outputs.source_sha }}
+        run: |
+          git fetch --force --no-tags origin "refs/tags/${RELEASE_TAG}:refs/release-verification/tag"
+          current_sha=$(git rev-parse 'refs/release-verification/tag^{commit}')
+          if [[ "$current_sha" != "$SOURCE_SHA" ]]; then
+            echo "Release tag moved from $SOURCE_SHA to $current_sha while awaiting approval." >&2
+            exit 1
+          fi
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3
