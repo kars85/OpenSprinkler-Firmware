@@ -21,6 +21,22 @@ function enable_i2c {
 }
 
 DEBUG=""
+# Test-only DEMO flags let CI use an unprivileged port and exercise the real
+# password boundary. Normal DEMO builds retain the historical port/bypass.
+DEMO_BUILD_FLAGS=(-DDEMO)
+
+if [ "${DEMO_AUTH_TEST:-0}" = "1" ]; then
+	DEMO_BUILD_FLAGS+=("-DDEMO_AUTH_TEST")
+fi
+
+if [ -n "${DEMO_HTTP_PORT:-}" ]; then
+	if ! [[ "${DEMO_HTTP_PORT}" =~ ^[0-9]+$ ]] ||
+		(( DEMO_HTTP_PORT < 1 || DEMO_HTTP_PORT > 65535 )); then
+		echo "DEMO_HTTP_PORT must be an integer from 1 to 65535" >&2
+		exit 2
+	fi
+	DEMO_BUILD_FLAGS+=("-DHTTP_PORT=${DEMO_HTTP_PORT}")
+fi
 
 while getopts ":s:d" opt; do
   case $opt in
@@ -53,7 +69,7 @@ if [ "$1" == "demo" ]; then
 
     ws=$(ls external/TinyWebsockets/tiny_websockets_lib/src/*.cpp)
     otf=$(ls external/OpenThings-Framework-Firmware-Library/*.cpp)
-    g++ -o OpenSprinkler -DDEMO -DSMTP_OPENSSL $DEBUG -std=c++14 -include string.h -include cstdint main.cpp OpenSprinkler.cpp program.cpp opensprinkler_server.cpp utils.cpp weather.cpp gpio.cpp mqtt.cpp notifier.cpp smtp.c RCSwitch.cpp -Iexternal/TinyWebsockets/tiny_websockets_lib/include $ws -Iexternal/OpenThings-Framework-Firmware-Library/ $otf -lpthread -lmosquitto -lssl -lcrypto
+    g++ -o OpenSprinkler "${DEMO_BUILD_FLAGS[@]}" -DSMTP_OPENSSL $DEBUG -std=c++14 -include string.h -include cstdint main.cpp OpenSprinkler.cpp program.cpp opensprinkler_server.cpp utils.cpp weather.cpp gpio.cpp mqtt.cpp notifier.cpp smtp.c RCSwitch.cpp -Iexternal/TinyWebsockets/tiny_websockets_lib/include $ws -Iexternal/OpenThings-Framework-Firmware-Library/ $otf -lpthread -lmosquitto -lssl -lcrypto
 else
 	echo "Installing required libraries..."
 	apt-get update
