@@ -185,7 +185,7 @@ const char iopt_json_names[] PROGMEM =
 	"imin\0"
 	"imax\0"
 	"tpdv\0"
-	"resv7"
+	"uwtv1"
 	"resv8"
 	"wimod"
 	"reset"
