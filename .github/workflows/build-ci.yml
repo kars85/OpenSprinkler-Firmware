@@ -141,6 +141,9 @@ jobs:
         with:
           name: docker-image
           path: ./image.tar
+          # Manual-download convenience only (no job consumes it); the 90-day default
+          # kept ~340 MB of stale branch images in Actions storage.
+          retention-days: 7
   validate-release:
     name: Validate Release Source
     runs-on: ubuntu-latest
