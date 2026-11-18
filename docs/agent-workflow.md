@@ -2,7 +2,7 @@
 
 GitHub Issues in **kars85/OpenSprinkler-Firmware** own work scope, acceptance checklists, evidence and completion. Empirica project **f199639b-012c-4b7e-bf34-0e40db00c367** owns this project's findings and uncertainty. `.agent-workflow.json` is the routing and verification profile.
 
-For substantive implementation or maintenance, find or file a controlling issue before edits. Filing and updating work documentation are authorized by the owner's project workflow; respect narrower instructions on a particular task. Read-only questions need no issue. Search for duplicates and update the existing issue when it covers the work. Use explicit `--repo kars85/OpenSprinkler-Firmware` on every GitHub command; never rely on an agent's previous working directory.
+For GitHub-authorized implementation or maintenance, find or file a controlling issue before edits. For explicitly local-only work, keep the equivalent draft locally. The owner has granted standing authorization to file and update sanitized work documentation in this project's GitHub repository. Apply it only to the current task's scope. An explicit local-only, no-publish, or confidentiality constraint overrides that standing authorization: keep the issue draft local and continue authorized local work without a GitHub write. When neither the current request nor standing permission covers publication, prepare a draft and ask before publishing. Read-only questions need no issue. Search for duplicates and update the existing issue when it covers the work. Use explicit `--repo kars85/OpenSprinkler-Firmware` on every GitHub command; never rely on an agent's previous working directory.
 
 ## Start and close a session
 
@@ -10,7 +10,7 @@ From this checkout run `python3 scripts/agent-workflow.py bootstrap`, then `veri
 
 Use Empirica's `preflight-submit --schema`, `check-submit --schema`, and `postflight-submit --schema` to construct assessments for this installed CLI version. Submit explicit session IDs with grounded vectors and reasoning. Record relevant findings/unknowns as you investigate; close with postflight and actual verification evidence. Never fabricate confidence, test passes or completed hardware checks.
 
-`python3 scripts/agent-workflow.py finding --session-id SESSION_UUID --text "sanitized finding"` stores project-local knowledge; `search --text "question"` retrieves only this project. Shared service connection settings come from the existing machine environment. Do not use global search, rebuild collections, change models, or copy another project's SQLite/identity to initialize this project. If Empirica is unavailable, keep intake and safe investigation moving and record the outage in the issue; do not claim an epistemic pass.
+`python3 scripts/agent-workflow.py finding --session-id SESSION_UUID --epistemic-source search --text "sanitized finding"` stores project-local knowledge. Select `intuition`, `search`, or `mixed` to match the actual evidence; the example uses search, not an automatic default. The command `search --text "question"` retrieves only this project. Shared service connection settings come from the existing machine environment. Do not use global search, rebuild collections, change models, or copy another project's SQLite/identity to initialize this project. If Empirica is unavailable, keep intake and safe investigation moving and record the outage in the issue; do not claim an epistemic pass.
 
 ## A / B / C contract
 
@@ -24,7 +24,7 @@ C (Claude PM/reviewer): inspect the actual diff against acceptance criteria, rev
 
 Use the target-specific build matrix in .github/workflows/build-ci.yml. package.json test is a failing placeholder. A build does not validate physical valves; flashing and live watering require task-specific authorization.
 
-Configured commands: No universal automated gate exists. Select the owning runbook or target build/validation procedure and record its exact command and limitations in PM-HANDOFF.
+Application/hardware checks: no universal application or device gate exists. Select the owning runbook or target build/validation procedure and record its exact command and limitations in PM-HANDOFF.
 
 Inspect the relevant checked-in workflow before claiming CI is green; only results for the exact candidate commit count. These configuration changes do not authorize firmware flashing, service restarts, mail sends, production-data changes, or synthetic notifications.
 
@@ -35,3 +35,5 @@ Keep `.empirica/`, session files, `.abc-state/`, credentials, private exports an
 Claude Code: `/intake bug "title"`, `/intake idea "title"`, or `/abc <issue-number>`. Named skills `opensprinkler-firmware-intake` and `opensprinkler-firmware-abc` are discoverable through both `.claude/skills` and `.agents/skills`; their canonical source is `skills/`.
 
 Setup and verification record: https://github.com/kars85/OpenSprinkler-Firmware/issues/22.
+
+The routing/privacy regression gate is `python3 -m unittest discover -s scripts -p 'test_agent_workflow.py'`. It is listed in `.agent-workflow.json` and runs in `.github/workflows/agent-workflow.yml` on relevant pushes and PRs. It supplements the owning application or hardware checks.

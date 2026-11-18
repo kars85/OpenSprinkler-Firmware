@@ -7,9 +7,12 @@
     "opensprinkler-firmware-abc",
     "opensprinkler-firmware-intake"
   ],
-  "verification_commands": [],
+  "verification_commands": [
+    "python3 -m unittest discover -s scripts -p 'test_agent_workflow.py'"
+  ],
   "verification_note": "Use the target-specific build matrix in .github/workflows/build-ci.yml. package.json test is a failing placeholder. A build does not validate physical valves; flashing and live watering require task-specific authorization.",
   "ci_workflows": [
+    ".github/workflows/agent-workflow.yml",
     ".github/workflows/build-ci.yml"
   ],
   "setup_issue": "https://github.com/kars85/OpenSprinkler-Firmware/issues/22"

@@ -9,6 +9,7 @@ import subprocess
 import sys
 import uuid
 from pathlib import Path
+from urllib.parse import urlsplit
 
 
 def context():
@@ -23,10 +24,18 @@ def context():
     origin = subprocess.check_output(
         ["git", "-C", str(root), "remote", "get-url", "origin"], text=True
     ).strip()
-    match = re.fullmatch(
-        r"(?:https://github\.com/|git@github\.com:)([^/]+/[^/]+?)(?:\.git)?", origin
-    )
-    if not match or match[1].lower() != config["repository"].lower():
+    if origin.startswith("git@github.com:"):
+        origin = "ssh://git@github.com/" + origin.removeprefix("git@github.com:")
+    remote = urlsplit(origin)
+    repository = remote.path.removeprefix("/").rstrip("/").removesuffix(".git")
+    if (
+        remote.scheme not in ("https", "ssh")
+        or remote.hostname != "github.com"
+        or remote.port not in (None, 22 if remote.scheme == "ssh" else 443)
+        or remote.query
+        or remote.fragment
+        or repository.lower() != config["repository"].lower()
+    ):
         raise RuntimeError("GitHub destination does not match this checkout origin")
     return root, config
 
@@ -39,6 +48,7 @@ def main():
     )
     parser.add_argument("--text")
     parser.add_argument("--session-id")
+    parser.add_argument("--epistemic-source", choices=["intuition", "search", "mixed"])
     args = parser.parse_args()
     root, config = context()
     if args.action == "status":
@@ -96,6 +106,10 @@ def main():
         parser.error("--text is required for " + args.action)
     if args.action == "finding" and not args.session_id:
         parser.error("--session-id from this conversation is required for finding")
+    if args.action == "finding" and not args.epistemic_source:
+        parser.error(
+            "--epistemic-source is required to record the finding's actual provenance"
+        )
     commands = {
         "bootstrap": [
             "project-bootstrap",
@@ -115,7 +129,7 @@ def main():
             "--visibility",
             "local",
             "--epistemic-source",
-            "search",
+            args.epistemic_source or "",
         ],
         "search": [
             "project-search",

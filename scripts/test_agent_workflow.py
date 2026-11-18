@@ -66,6 +66,86 @@ class RoutingTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "destination"):
             self.module.context()
 
+    def test_standard_github_remote_forms(self):
+        for origin in (
+            "git@github.com:example/test.git",
+            "ssh://git@github.com/example/test.git",
+            "ssh://git@github.com:22/example/test.git/",
+            "https://username:fake-token@github.com/example/test.git/",
+        ):
+            with self.subTest(origin=origin):
+                subprocess.run(
+                    [
+                        "git",
+                        "-C",
+                        str(self.root),
+                        "remote",
+                        "set-url",
+                        "origin",
+                        origin,
+                    ],
+                    check=True,
+                )
+                self.assertEqual(self.module.context()[1]["repository"], "example/test")
+
+    def test_spoofed_github_remote_is_rejected(self):
+        for origin in (
+            "ssh://git@github.com.example.org/example/test.git",
+            "https://github.com@evil.example/example/test.git",
+            "https://github.com/example/test.git?redirect=other",
+            "ssh://git@github.com/example/other.git",
+        ):
+            with self.subTest(origin=origin):
+                subprocess.run(
+                    [
+                        "git",
+                        "-C",
+                        str(self.root),
+                        "remote",
+                        "set-url",
+                        "origin",
+                        origin,
+                    ],
+                    check=True,
+                )
+                with self.assertRaisesRegex(RuntimeError, "destination"):
+                    self.module.context()
+
+    def test_workflow_allowlist_keeps_local_agent_files_private(self):
+        checkout = SOURCE.parent.parent
+        (self.root / ".gitignore").write_bytes((checkout / ".gitignore").read_bytes())
+        profile = json.loads((checkout / ".agent-workflow.json").read_text())
+        private = [
+            ".claude/session-notes.md",
+            ".claude/settings.local.json",
+            ".claude/commands/local-only.md",
+            ".claude/skills/local-only/SKILL.md",
+            ".agents/session-notes.md",
+            ".agents/skills/local-only/SKILL.md",
+            ".empirica/sessions/sessions.db",
+        ]
+        admitted = [".claude/commands/abc.md", ".claude/commands/intake.md"]
+        for name in profile["skills"]:
+            admitted.extend([".claude/skills/" + name, ".agents/skills/" + name])
+        for path in private + admitted:
+            with self.subTest(path=path):
+                result = subprocess.run(
+                    [
+                        "git",
+                        "-C",
+                        str(self.root),
+                        "-c",
+                        "core.excludesFile=/dev/null",
+                        "check-ignore",
+                        "--no-index",
+                        "--quiet",
+                        "--",
+                        path,
+                    ],
+                    check=False,
+                )
+                self.assertEqual(result.returncode, 0 if path in private else 1)
+
     def test_wrong_identity_is_rejected_before_writing(self):
         (self.root / ".empirica/project.yaml").write_text("project_id: foreign\n")
         with (
@@ -105,6 +185,8 @@ class RoutingTests(unittest.TestCase):
                     "safe test",
                     "--session-id",
                     "my-session",
+                    "--epistemic-source",
+                    "mixed",
                 ],
             ),
             patch.object(
@@ -119,7 +201,23 @@ class RoutingTests(unittest.TestCase):
         command = run.call_args.args[0]
         self.assertEqual(command[command.index("--project-id") + 1], self.id)
         self.assertEqual(command[command.index("--session-id") + 1], "my-session")
+        self.assertEqual(command[command.index("--epistemic-source") + 1], "mixed")
         self.assertNotIn("--global", command)
+
+    def test_finding_requires_explicit_provenance(self):
+        with (
+            self.local_context(),
+            patch.object(
+                sys,
+                "argv",
+                ["workflow", "finding", "--text", "test", "--session-id", "my-session"],
+            ),
+            patch.object(self.module.subprocess, "run") as run,
+        ):
+            with self.assertRaises(SystemExit) as result:
+                self.module.main()
+        self.assertEqual(result.exception.code, 2)
+        run.assert_not_called()
 
     def test_fresh_checkout_bootstraps_same_identity(self):
         (self.root / ".empirica/project.yaml").unlink()

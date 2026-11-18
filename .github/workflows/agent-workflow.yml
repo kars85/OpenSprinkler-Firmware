@@ -1,0 +1,33 @@
+name: Agent workflow checks
+on:
+  push:
+    paths:
+      - '.agent-workflow.json'
+      - '.gitignore'
+      - 'scripts/agent-workflow.py'
+      - 'scripts/test_agent_workflow.py'
+      - '.claude/**'
+      - '.agents/**'
+      - 'skills/**'
+      - '.github/workflows/agent-workflow.yml'
+  pull_request:
+    paths:
+      - '.agent-workflow.json'
+      - '.gitignore'
+      - 'scripts/agent-workflow.py'
+      - 'scripts/test_agent_workflow.py'
+      - '.claude/**'
+      - '.agents/**'
+      - 'skills/**'
+      - '.github/workflows/agent-workflow.yml'
+permissions:
+  contents: read
+jobs:
+  workflow-routing:
+    name: Workflow routing and privacy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - run: python3 -m unittest discover -s scripts -p 'test_agent_workflow.py'
