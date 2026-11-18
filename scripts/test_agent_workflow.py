@@ -235,6 +235,8 @@ class RoutingTests(unittest.TestCase):
             ".agents/session-notes.md",
             ".agents/skills/local-only/SKILL.md",
             ".empirica/sessions/sessions.db",
+            ".empirica_reflex_logs/assessment.json",
+            ".breadcrumbs.yaml",
         ]
         admitted = [".claude/commands/abc.md", ".claude/commands/intake.md"]
         for name in profile["skills"]:
