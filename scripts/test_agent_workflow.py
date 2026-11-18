@@ -161,6 +161,80 @@ class RoutingTests(unittest.TestCase):
                 self.module.main()
         run.assert_not_called()
 
+    def test_identity_suffixes_and_duplicate_keys_are_rejected(self):
+        for value in (
+            "project_id: " + self.id + ".foreign\n",
+            "project_id: " + self.id + "\nproject_id: foreign\n",
+            "project_id: " + self.id + '\n"project_id": foreign\n',
+            'project_id: "' + self.id + "'\n",
+        ):
+            with self.subTest(value=value):
+                (self.root / ".empirica/project.yaml").write_text(value)
+                with (
+                    self.local_context(),
+                    patch.object(sys, "argv", ["workflow", "session"]),
+                    patch.object(self.module.subprocess, "run") as run,
+                ):
+                    with self.assertRaisesRegex(RuntimeError, "identity mismatch"):
+                        self.module.main()
+                run.assert_not_called()
+
+    def test_actual_checkout_entrypoints_resolve(self):
+        checkout = SOURCE.parent.parent
+        profile = json.loads((checkout / ".agent-workflow.json").read_text())
+        self.module.verify_entrypoints(checkout, profile)
+
+    def test_wrong_skill_link_is_rejected(self):
+        for path in [
+            "skills/test-abc/SKILL.md",
+            ".claude/commands/abc.md",
+            ".claude/commands/intake.md",
+            "docs/agent-workflow.md",
+        ]:
+            target = self.root / path
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text("fixture")
+        for base in [".agents/skills", ".claude/skills"]:
+            target = self.root / base / "test-abc"
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.symlink_to("../../skills/test-abc")
+        profile = dict(self.config, skills=["test-abc"])
+        self.module.verify_entrypoints(self.root, profile)
+        (self.root / ".agents/skills/test-abc").unlink()
+        (self.root / ".agents/skills/test-abc").symlink_to("../../skills/missing")
+        with self.assertRaisesRegex(RuntimeError, "entrypoint"):
+            self.module.verify_entrypoints(self.root, profile)
+
+    def test_dash_leading_text_is_passed_as_a_value(self):
+        for action, flag in [("finding", "--finding="), ("search", "--task=")]:
+            with (
+                self.subTest(action=action),
+                self.local_context(),
+                patch.object(
+                    sys,
+                    "argv",
+                    [
+                        "workflow",
+                        action,
+                        "--text=--global",
+                        "--session-id",
+                        "my-session",
+                        "--epistemic-source",
+                        "mixed",
+                    ],
+                ),
+                patch.object(
+                    self.module.subprocess,
+                    "run",
+                    return_value=subprocess.CompletedProcess([], 0),
+                ) as run,
+            ):
+                with self.assertRaises(SystemExit) as result:
+                    self.module.main()
+            self.assertEqual(result.exception.code, 0)
+            self.assertIn(flag + "--global", run.call_args.args[0])
+            self.assertNotIn("--global", run.call_args.args[0])
+
     def test_finding_requires_explicit_session(self):
         with (
             self.local_context(),

@@ -2,7 +2,7 @@
 
 GitHub Issues in **kars85/OpenSprinkler-Firmware** own work scope, acceptance checklists, evidence and completion. Empirica project **f199639b-012c-4b7e-bf34-0e40db00c367** owns this project's findings and uncertainty. `.agent-workflow.json` is the routing and verification profile.
 
-For GitHub-authorized implementation or maintenance, find or file a controlling issue before edits. For explicitly local-only work, keep the equivalent draft locally. The owner has granted standing authorization to file and update sanitized work documentation in this project's GitHub repository. Apply it only to the current task's scope. An explicit local-only, no-publish, or confidentiality constraint overrides that standing authorization: keep the issue draft local and continue authorized local work without a GitHub write. When neither the current request nor standing permission covers publication, prepare a draft and ask before publishing. Read-only questions need no issue. Search for duplicates and update the existing issue when it covers the work. Use explicit `--repo kars85/OpenSprinkler-Firmware` on every GitHub command; never rely on an agent's previous working directory.
+For GitHub-authorized implementation or maintenance, find or file a controlling issue before edits. For explicitly local-only work, keep the equivalent draft locally. The [recorded owner authorization](https://github.com/kars85/OpenSprinkler-Firmware/issues/22#issuecomment-6984385634) permits filing and updating sanitized work documentation in this project's GitHub repository. Apply it only to the current task's scope. An explicit local-only, no-publish, or confidentiality constraint overrides that standing authorization: keep the issue draft local and continue authorized local work without a GitHub write. When neither the current request nor standing permission covers publication, prepare a draft and ask before publishing. Read-only questions need no issue. Search for duplicates and update the existing issue when it covers the work. Use explicit `--repo kars85/OpenSprinkler-Firmware` on every GitHub command; never rely on an agent's previous working directory.
 
 ## Start and close a session
 
@@ -10,7 +10,7 @@ From this checkout run `python3 scripts/agent-workflow.py bootstrap`, then `veri
 
 Use Empirica's `preflight-submit --schema`, `check-submit --schema`, and `postflight-submit --schema` to construct assessments for this installed CLI version. Submit explicit session IDs with grounded vectors and reasoning. Record relevant findings/unknowns as you investigate; close with postflight and actual verification evidence. Never fabricate confidence, test passes or completed hardware checks.
 
-`python3 scripts/agent-workflow.py finding --session-id SESSION_UUID --epistemic-source search --text "sanitized finding"` stores project-local knowledge. Select `intuition`, `search`, or `mixed` to match the actual evidence; the example uses search, not an automatic default. The command `search --text "question"` retrieves only this project. Shared service connection settings come from the existing machine environment. Do not use global search, rebuild collections, change models, or copy another project's SQLite/identity to initialize this project. If Empirica is unavailable, keep intake and safe investigation moving and record the outage in the issue; do not claim an epistemic pass.
+`python3 scripts/agent-workflow.py finding --session-id SESSION_UUID --epistemic-source search --text="sanitized finding"` stores project-local knowledge. Select `intuition`, `search`, or `mixed` to match the actual evidence; the example uses search, not an automatic default. The command `search --text="question"` retrieves only this project. Shared service connection settings come from the existing machine environment. Do not use global search, rebuild collections, change models, or copy another project's SQLite/identity to initialize this project. If Empirica is unavailable, keep intake and safe investigation moving and record the outage in the issue; do not claim an epistemic pass.
 
 ## A / B / C contract
 
@@ -37,3 +37,5 @@ Claude Code: `/intake bug "title"`, `/intake idea "title"`, or `/abc <issue-numb
 Setup and verification record: https://github.com/kars85/OpenSprinkler-Firmware/issues/22.
 
 The routing/privacy regression gate is `python3 -m unittest discover -s scripts -p 'test_agent_workflow.py'`. It is listed in `.agent-workflow.json` and runs in `.github/workflows/agent-workflow.yml` on relevant pushes and PRs. It supplements the owning application or hardware checks.
+
+For dash-leading text, use `--text="--flag or bullet text"`; the helper passes it to Empirica as a value, never an option.

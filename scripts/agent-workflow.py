@@ -40,6 +40,24 @@ def context():
     return root, config
 
 
+def verify_entrypoints(root, config):
+    for name in config["skills"]:
+        canonical = (root / "skills" / name / "SKILL.md").resolve()
+        if not canonical.is_file() or not canonical.is_relative_to(root.resolve()):
+            raise RuntimeError("Missing or external canonical skill: " + name)
+        for base in [".agents/skills", ".claude/skills"]:
+            entry = root / base / name / "SKILL.md"
+            if not entry.is_file() or entry.resolve() != canonical:
+                raise RuntimeError("Invalid skill entrypoint: " + base + "/" + name)
+    for path in [
+        ".claude/commands/abc.md",
+        ".claude/commands/intake.md",
+        "docs/agent-workflow.md",
+    ]:
+        if not (root / path).is_file():
+            raise RuntimeError("Missing workflow file: " + path)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -75,23 +93,27 @@ def main():
             cwd=root,
             check=True,
         )
-    found = re.search(r"^project_id:\s*[\'\"]?([\w-]+)", project.read_text(), re.M)
-    if not found or found[1] != config["project_id"]:
+    # project-init emits a top-level UUID scalar; reject duplicate or alternate values.
+    entries = re.findall(
+        r"^(?:project_id|\"project_id\"|'project_id')[ \t]*:[^\r\n]*",
+        project.read_text(),
+        re.MULTILINE,
+    )
+    identity = (
+        entries[0].split(":", 1)[1].split("#", 1)[0].strip()
+        if len(entries) == 1
+        else ""
+    )
+    if identity.startswith(("'", '"')):
+        identity = (
+            identity[1:-1] if len(identity) >= 2 and identity[-1] == identity[0] else ""
+        )
+    if identity != config["project_id"]:
         raise RuntimeError(
             "Empirica identity mismatch; do not write into another project"
         )
     if args.action == "verify":
-        for name in config["skills"]:
-            for base in ["skills", ".agents/skills", ".claude/skills"]:
-                if not (root / base / name / "SKILL.md").is_file():
-                    raise RuntimeError("Missing skill entrypoint: " + base + "/" + name)
-        for path in [
-            ".claude/commands/abc.md",
-            ".claude/commands/intake.md",
-            "docs/agent-workflow.md",
-        ]:
-            if not (root / path).is_file():
-                raise RuntimeError("Missing workflow file: " + path)
+        verify_entrypoints(root, config)
         print(
             json.dumps(
                 {
@@ -122,8 +144,7 @@ def main():
             "finding-log",
             "--session-id",
             args.session_id or "",
-            "--finding",
-            args.text or "",
+            "--finding=" + (args.text or ""),
             "--scope",
             "project",
             "--visibility",
@@ -133,8 +154,7 @@ def main():
         ],
         "search": [
             "project-search",
-            "--task",
-            args.text or "",
+            "--task=" + (args.text or ""),
             "--type",
             "focused",
             "--limit",
