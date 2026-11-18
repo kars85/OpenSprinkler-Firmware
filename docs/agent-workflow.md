@@ -4,6 +4,14 @@ GitHub Issues in **kars85/OpenSprinkler-Firmware** own work scope, acceptance ch
 
 For GitHub-authorized implementation or maintenance, find or file a controlling issue before edits. For explicitly local-only work, keep the equivalent draft locally. The [recorded owner authorization](https://github.com/kars85/OpenSprinkler-Firmware/issues/22#issuecomment-6984385634) permits filing and updating sanitized work documentation in this project's GitHub repository. Apply it only to the current task's scope. An explicit local-only, no-publish, or confidentiality constraint overrides that standing authorization: keep the issue draft local and continue authorized local work without a GitHub write. When neither the current request nor standing permission covers publication, prepare a draft and ask before publishing. Read-only questions need no issue. Search for duplicates and update the existing issue when it covers the work. Use explicit `--repo kars85/OpenSprinkler-Firmware` on every GitHub command; never rely on an agent's previous working directory.
 
+## Restricted local execution
+
+When the task is offline/local-only or excludes the needed service operations, take this branch instead of the shared-service sequence below. Read the supplied or cached issue draft and local source; use only the current agent and permitted local tools. Do not launch cloud-backed Claude/Codex CLI agents, perform GitHub lookups/writes, or call Empirica for the restricted task.
+
+Keep PM-HANDOFF, DEV-EXECUTION and PM-VALIDATION in a private local draft. Metadata uses that draft's path instead of an issue URL, and `session: not opened (offline)` instead of inventing or borrowing an Empirica session. Perform authorized local edits/checks and record their evidence. Mark shared retrieval, epistemic validation, remote reviews, CI, publication and merge as `not run: outside task scope`; do not claim the connected workflow passed. Return the local draft/change locations and remaining gates, then stop this workflow. Resume connected steps only under authorization that covers their actual reads and writes.
+
+The remaining connected-workflow sections apply only when their service operations are authorized.
+
 ## Start and close a session
 
 Before any GitHub or Empirica access, apply the current task's publication and confidentiality constraints. Offline or explicitly local-only work stays on this machine: do not bootstrap, initialize, create Empirica sessions, retrieve shared context, or publish/embed findings unless the current request explicitly permits those services. Use local files and cached evidence, keep a local draft, and continue authorized local work. `python3 scripts/agent-workflow.py status` is local; `verify` is also local when identity files already exist. A no-publish constraint alone forbids writes, not reads already authorized by the task.
