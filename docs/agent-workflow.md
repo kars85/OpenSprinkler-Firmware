@@ -6,17 +6,21 @@ For GitHub-authorized implementation or maintenance, find or file a controlling 
 
 ## Restricted local execution
 
-When the task is offline/local-only or excludes the needed service operations, take this branch instead of the shared-service sequence below. Read the supplied or cached issue draft and local source; use only the current agent and permitted local tools. Do not launch cloud-backed Claude/Codex CLI agents, perform GitHub lookups/writes, or call Empirica for the restricted task.
+When the task is fully offline/local-only with no external operations authorized, take this branch instead of the shared-service sequence below. Read the supplied or cached issue draft and local source; use only the current agent and permitted local tools. Do not launch cloud-backed Claude/Codex CLI agents, perform GitHub lookups/writes, or call Empirica for the restricted task.
 
 Keep PM-HANDOFF, DEV-EXECUTION and PM-VALIDATION in a private local draft. Metadata uses that draft's path instead of an issue URL, and `session: not opened (offline)` instead of inventing or borrowing an Empirica session. Perform authorized local edits/checks and record their evidence. Mark shared retrieval, epistemic validation, remote reviews, CI, publication and merge as `not run: outside task scope`; do not claim the connected workflow passed. Return the local draft/change locations and remaining gates, then stop this workflow. Resume connected steps only under authorization that covers their actual reads and writes.
 
 The remaining connected-workflow sections apply only when their service operations are authorized.
 
+## Shared reads without bookkeeping writes
+
+Read access alone never authorizes Empirica initialization, bootstrap, session creation, assessments, findings, or embeddings. Until the task authorizes those writes, skip that entire startup sequence. Use local `status`, `verify` when identity files already exist, and cached/supplied evidence; keep session metadata as `not opened (writes not authorized)`. Use only separately authorized, verified read-only service interfaces for shared queries. If no such retrieval interface is established, mark shared retrieval unrun rather than invoking bootstrap to obtain it. GitHub lookups or writes remain separately governed by their own permissions; complete the authorized portions with local drafts for excluded outputs.
+
 ## Start and close a session
 
 Before any GitHub or Empirica access, apply the current task's publication and confidentiality constraints. Offline or explicitly local-only work stays on this machine: do not bootstrap, initialize, create Empirica sessions, retrieve shared context, or publish/embed findings unless the current request explicitly permits those services. Use local files and cached evidence, keep a local draft, and continue authorized local work. `python3 scripts/agent-workflow.py status` is local; `verify` is also local when identity files already exist. A no-publish constraint alone forbids writes, not reads already authorized by the task.
 
-When shared-service access is authorized, run `python3 scripts/agent-workflow.py bootstrap` from this checkout, then `verify` and `session`. Retain the returned session UUID for this conversation; concurrent sessions must never borrow the newest transaction file. Missing state in a new clone/worktree is initialized by `bootstrap` with the existing project UUID. Each checkout has its own local runtime state; the logical project namespace stays shared across its worktrees.
+When Empirica initialization and session/evidence writes are authorized, run `python3 scripts/agent-workflow.py bootstrap` from this checkout, then `verify` and `session`. Retain the returned session UUID for this conversation; concurrent sessions must never borrow the newest transaction file. Missing state in a new clone/worktree is initialized by `bootstrap` with the existing project UUID. Each checkout has its own local runtime state; the logical project namespace stays shared across its worktrees.
 
 Use Empirica's `preflight-submit --schema`, `check-submit --schema`, and `postflight-submit --schema` to construct assessments for this installed CLI version. Submit explicit session IDs with grounded vectors and reasoning. Record relevant findings/unknowns as you investigate; close with postflight and actual verification evidence. Never fabricate confidence, test passes or completed hardware checks.
 
@@ -46,7 +50,7 @@ Claude Code: `/intake bug "title"`, `/intake idea "title"`, or `/abc <issue-numb
 
 Setup and verification record: https://github.com/kars85/OpenSprinkler-Firmware/issues/22.
 
-The routing/privacy regression gate is `python3 -m unittest discover -s scripts -p 'test_agent_workflow.py'`. It is listed in `.agent-workflow.json` and runs in `.github/workflows/agent-workflow.yml` on every push and PR. It supplements the owning application or hardware checks.
+The routing/privacy regression gate is `python3 -c 'import yaml' && python3 scripts/test_agent_workflow.py`. It is listed in `.agent-workflow.json` and runs in `.github/workflows/agent-workflow.yml` on every push and PR. It supplements the owning application or hardware checks.
 
 For dash-leading text, use `--text="--flag or bullet text"`; the helper passes it to Empirica as a value, never an option.
 

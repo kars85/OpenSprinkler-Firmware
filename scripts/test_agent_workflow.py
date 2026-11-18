@@ -2,6 +2,7 @@
 
 import importlib.util
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -20,6 +21,15 @@ SOURCE = Path(__file__).with_name("agent-workflow.py")
 )
 class RoutingTests(unittest.TestCase):
     def setUp(self):
+        environment = {
+            key: value
+            for key, value in os.environ.items()
+            if not key.startswith("GIT_")
+        }
+        environment.update(GIT_CONFIG_GLOBAL=os.devnull, GIT_CONFIG_SYSTEM=os.devnull)
+        clean_git_environment = patch.dict(os.environ, environment, clear=True)
+        clean_git_environment.start()
+        self.addCleanup(clean_git_environment.stop)
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
@@ -64,6 +74,17 @@ class RoutingTests(unittest.TestCase):
         root, profile = self.module.context()
         self.assertEqual(root, self.root)
         self.assertEqual(profile["project_id"], self.id)
+
+    def test_inherited_git_dir_cannot_redirect_fixture_setup(self):
+        original_config = (self.root / ".git/config").read_bytes()
+        with patch.dict(
+            os.environ,
+            {"GIT_DIR": str(self.root / ".git"), "GIT_WORK_TREE": str(self.root)},
+        ):
+            result = unittest.TestResult()
+            RoutingTests("test_correct_repository").run(result)
+        self.assertTrue(result.wasSuccessful(), result.errors + result.failures)
+        self.assertEqual((self.root / ".git/config").read_bytes(), original_config)
 
     def test_wrong_repository_is_rejected(self):
         self.config["repository"] = "example/other"
