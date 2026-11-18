@@ -6,7 +6,9 @@ For GitHub-authorized implementation or maintenance, find or file a controlling 
 
 ## Start and close a session
 
-From this checkout run `python3 scripts/agent-workflow.py bootstrap`, then `verify` and `session`. Retain the returned session UUID for this conversation; concurrent sessions must never borrow the newest transaction file. Missing state in a new clone/worktree is initialized by `bootstrap` with the existing project UUID. Each checkout has its own local runtime state; the logical project namespace stays shared across its worktrees.
+Before any GitHub or Empirica access, apply the current task's publication and confidentiality constraints. Offline or explicitly local-only work stays on this machine: do not bootstrap, initialize, create Empirica sessions, retrieve shared context, or publish/embed findings unless the current request explicitly permits those services. Use local files and cached evidence, keep a local draft, and continue authorized local work. `python3 scripts/agent-workflow.py status` is local; `verify` is also local when identity files already exist. A no-publish constraint alone forbids writes, not reads already authorized by the task.
+
+When shared-service access is authorized, run `python3 scripts/agent-workflow.py bootstrap` from this checkout, then `verify` and `session`. Retain the returned session UUID for this conversation; concurrent sessions must never borrow the newest transaction file. Missing state in a new clone/worktree is initialized by `bootstrap` with the existing project UUID. Each checkout has its own local runtime state; the logical project namespace stays shared across its worktrees.
 
 Use Empirica's `preflight-submit --schema`, `check-submit --schema`, and `postflight-submit --schema` to construct assessments for this installed CLI version. Submit explicit session IDs with grounded vectors and reasoning. Record relevant findings/unknowns as you investigate; close with postflight and actual verification evidence. Never fabricate confidence, test passes or completed hardware checks.
 
