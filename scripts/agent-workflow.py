@@ -22,17 +22,27 @@ class UniqueKeySafeLoader(yaml.SafeLoader):
         return super().construct_mapping(node, deep=deep)
 
 
+def checkout_environment():
+    return {
+        key: value for key, value in os.environ.items() if not key.startswith("GIT_")
+    }
+
+
 def context():
     root = Path(__file__).resolve().parents[1]
     config = json.loads((root / ".agent-workflow.json").read_text())
     uuid.UUID(config["project_id"])
     actual = subprocess.check_output(
-        ["git", "-C", str(root), "rev-parse", "--show-toplevel"], text=True
+        ["git", "-C", str(root), "rev-parse", "--show-toplevel"],
+        text=True,
+        env=checkout_environment(),
     ).strip()
     if Path(actual).resolve() != root:
         raise RuntimeError("Workflow file is outside its owning Git checkout")
     origin = subprocess.check_output(
-        ["git", "-C", str(root), "remote", "get-url", "origin"], text=True
+        ["git", "-C", str(root), "remote", "get-url", "origin"],
+        text=True,
+        env=checkout_environment(),
     ).strip()
     if origin.startswith("git@github.com:"):
         origin = "ssh://git@github.com/" + origin.removeprefix("git@github.com:")
@@ -79,6 +89,7 @@ def main():
     parser.add_argument("--epistemic-source", choices=["intuition", "search", "mixed"])
     args = parser.parse_args()
     root, config = context()
+    env = dict(checkout_environment(), EMPIRICA_PROJECT_ID=config["project_id"])
     if args.action == "status":
         print(json.dumps(config, indent=2))
         return
@@ -101,6 +112,7 @@ def main():
                 "json",
             ],
             cwd=root,
+            env=env,
             check=True,
         )
     try:
@@ -165,7 +177,6 @@ def main():
             "5",
         ],
     }
-    env = dict(os.environ, EMPIRICA_PROJECT_ID=config["project_id"])
     result = subprocess.run(
         [
             "empirica",

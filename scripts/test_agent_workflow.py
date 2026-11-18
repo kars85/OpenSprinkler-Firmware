@@ -92,6 +92,40 @@ class RoutingTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "destination"):
             self.module.context()
 
+    def test_foreign_git_metadata_cannot_spoof_context(self):
+        foreign = self.root / "foreign"
+        subprocess.run(["git", "init", "-q", str(foreign)], check=True)
+        subprocess.run(
+            [
+                "git",
+                "-C",
+                str(foreign),
+                "remote",
+                "add",
+                "origin",
+                "https://github.com/example/test.git",
+            ],
+            check=True,
+        )
+        subprocess.run(
+            [
+                "git",
+                "-C",
+                str(self.root),
+                "remote",
+                "set-url",
+                "origin",
+                "https://github.com/example/other.git",
+            ],
+            check=True,
+        )
+        with patch.dict(
+            os.environ,
+            {"GIT_DIR": str(foreign / ".git"), "GIT_WORK_TREE": str(self.root)},
+        ):
+            with self.assertRaisesRegex(RuntimeError, "destination"):
+                self.module.context()
+
     def test_standard_github_remote_forms(self):
         for origin in (
             "git@github.com:example/test.git",
@@ -324,6 +358,9 @@ class RoutingTests(unittest.TestCase):
         self.assertEqual(command[command.index("--session-id") + 1], "my-session")
         self.assertEqual(command[command.index("--epistemic-source") + 1], "mixed")
         self.assertNotIn("--global", command)
+        self.assertFalse(
+            any(key.startswith("GIT_") for key in run.call_args.kwargs["env"])
+        )
 
     def test_finding_requires_explicit_provenance(self):
         with (
