@@ -13,6 +13,11 @@ from unittest.mock import patch
 SOURCE = Path(__file__).with_name("agent-workflow.py")
 
 
+# Application suites may discover this file; dedicated workflow CI installs PyYAML first.
+@unittest.skipUnless(
+    importlib.util.find_spec("yaml"),
+    "Install scripts/requirements-agent-workflow.txt for workflow checks",
+)
 class RoutingTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
@@ -167,6 +172,7 @@ class RoutingTests(unittest.TestCase):
             "project_id: " + self.id + "#foreign\n",
             "project_id: " + self.id + "\nproject_id: foreign\n",
             "project_id: " + self.id + '\n"project_id": foreign\n',
+            "project_id: " + self.id + '\n"\\x70roject_id": foreign\n',
             'project_id: "' + self.id + "'\n",
         ):
             with self.subTest(value=value):

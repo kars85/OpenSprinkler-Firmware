@@ -4,12 +4,22 @@
 import argparse
 import json
 import os
-import re
 import subprocess
 import sys
 import uuid
 from pathlib import Path
 from urllib.parse import urlsplit
+
+import yaml
+
+
+class UniqueKeySafeLoader(yaml.SafeLoader):
+    def construct_mapping(self, node, deep=False):
+        self.flatten_mapping(node)
+        keys = [self.construct_object(key, deep=deep) for key, _ in node.value]
+        if len(keys) != len(set(keys)):
+            raise ValueError("Duplicate YAML key")
+        return super().construct_mapping(node, deep=deep)
 
 
 def context():
@@ -93,15 +103,16 @@ def main():
             cwd=root,
             check=True,
         )
-    # project-init emits a top-level UUID scalar; reject duplicate or alternate values.
-    entries = re.findall(
-        r"^(?:project_id|\"project_id\"|'project_id')[ \t]*:[^\r\n]*",
-        project.read_text(),
-        re.MULTILINE,
-    )
-    identity = re.escape(config["project_id"])
-    scalar = rf'''project_id[ \t]*:[ \t]*(?:{identity}|'{identity}'|"{identity}")(?:[ \t]+\#[^\r\n]*)?[ \t]*'''
-    if len(entries) != 1 or not re.fullmatch(scalar, entries[0]):
+    try:
+        identity = yaml.load(project.read_text(), Loader=UniqueKeySafeLoader)
+    except (yaml.YAMLError, ValueError, TypeError):
+        raise RuntimeError(
+            "Empirica identity mismatch: malformed or duplicate YAML"
+        ) from None
+    if (
+        not isinstance(identity, dict)
+        or identity.get("project_id") != config["project_id"]
+    ):
         raise RuntimeError(
             "Empirica identity mismatch; do not write into another project"
         )

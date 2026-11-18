@@ -10,4 +10,11 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           persist-credentials: false
-      - run: python3 -m unittest discover -s scripts -p 'test_agent_workflow.py'
+      - name: Install workflow parser in an isolated environment
+        run: |
+          python3 -m venv .workflow-test-env
+          .workflow-test-env/bin/python -m pip install -r scripts/requirements-agent-workflow.txt
+      - name: Run workflow routing and privacy checks
+        run: |
+          .workflow-test-env/bin/python -c 'import yaml'
+          .workflow-test-env/bin/python scripts/test_agent_workflow.py
