@@ -32,7 +32,7 @@ class RoutingTests(unittest.TestCase):
         self.addCleanup(clean_git_environment.stop)
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
-        self.root = Path(self.temp.name)
+        self.root = Path(self.temp.name).resolve()
         (self.root / "scripts").mkdir()
         target = self.root / "scripts/agent-workflow.py"
         shutil.copyfile(SOURCE, target)
