@@ -164,6 +164,7 @@ class RoutingTests(unittest.TestCase):
     def test_identity_suffixes_and_duplicate_keys_are_rejected(self):
         for value in (
             "project_id: " + self.id + ".foreign\n",
+            "project_id: " + self.id + "#foreign\n",
             "project_id: " + self.id + "\nproject_id: foreign\n",
             "project_id: " + self.id + '\n"project_id": foreign\n',
             'project_id: "' + self.id + "'\n",
@@ -178,6 +179,25 @@ class RoutingTests(unittest.TestCase):
                     with self.assertRaisesRegex(RuntimeError, "identity mismatch"):
                         self.module.main()
                 run.assert_not_called()
+
+    def test_exact_identity_scalars_and_separated_comments_are_accepted(self):
+        for scalar in (self.id, "'" + self.id + "'", '"' + self.id + '"'):
+            with (
+                self.subTest(scalar=scalar),
+                self.local_context(),
+                patch.object(sys, "argv", ["workflow", "session"]),
+                patch.object(
+                    self.module.subprocess,
+                    "run",
+                    return_value=subprocess.CompletedProcess([], 0),
+                ),
+            ):
+                (self.root / ".empirica/project.yaml").write_text(
+                    "project_id: " + scalar + " # valid comment\n"
+                )
+                with self.assertRaises(SystemExit) as result:
+                    self.module.main()
+            self.assertEqual(result.exception.code, 0)
 
     def test_actual_checkout_entrypoints_resolve(self):
         checkout = SOURCE.parent.parent

@@ -1,25 +1,5 @@
 name: Agent workflow checks
-on:
-  push:
-    paths:
-      - '.agent-workflow.json'
-      - '.gitignore'
-      - 'scripts/agent-workflow.py'
-      - 'scripts/test_agent_workflow.py'
-      - '.claude/**'
-      - '.agents/**'
-      - 'skills/**'
-      - '.github/workflows/agent-workflow.yml'
-  pull_request:
-    paths:
-      - '.agent-workflow.json'
-      - '.gitignore'
-      - 'scripts/agent-workflow.py'
-      - 'scripts/test_agent_workflow.py'
-      - '.claude/**'
-      - '.agents/**'
-      - 'skills/**'
-      - '.github/workflows/agent-workflow.yml'
+on: [push, pull_request]
 permissions:
   contents: read
 jobs:

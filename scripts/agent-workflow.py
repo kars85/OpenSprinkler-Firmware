@@ -99,16 +99,9 @@ def main():
         project.read_text(),
         re.MULTILINE,
     )
-    identity = (
-        entries[0].split(":", 1)[1].split("#", 1)[0].strip()
-        if len(entries) == 1
-        else ""
-    )
-    if identity.startswith(("'", '"')):
-        identity = (
-            identity[1:-1] if len(identity) >= 2 and identity[-1] == identity[0] else ""
-        )
-    if identity != config["project_id"]:
+    identity = re.escape(config["project_id"])
+    scalar = rf'''project_id[ \t]*:[ \t]*(?:{identity}|'{identity}'|"{identity}")(?:[ \t]+\#[^\r\n]*)?[ \t]*'''
+    if len(entries) != 1 or not re.fullmatch(scalar, entries[0]):
         raise RuntimeError(
             "Empirica identity mismatch; do not write into another project"
         )

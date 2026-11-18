@@ -36,6 +36,6 @@ Claude Code: `/intake bug "title"`, `/intake idea "title"`, or `/abc <issue-numb
 
 Setup and verification record: https://github.com/kars85/OpenSprinkler-Firmware/issues/22.
 
-The routing/privacy regression gate is `python3 -m unittest discover -s scripts -p 'test_agent_workflow.py'`. It is listed in `.agent-workflow.json` and runs in `.github/workflows/agent-workflow.yml` on relevant pushes and PRs. It supplements the owning application or hardware checks.
+The routing/privacy regression gate is `python3 -m unittest discover -s scripts -p 'test_agent_workflow.py'`. It is listed in `.agent-workflow.json` and runs in `.github/workflows/agent-workflow.yml` on every push and PR. It supplements the owning application or hardware checks.
 
 For dash-leading text, use `--text="--flag or bullet text"`; the helper passes it to Empirica as a value, never an option.
