@@ -64,6 +64,23 @@ class RoutingTests(unittest.TestCase):
         spec = importlib.util.spec_from_file_location("workflow_test", target)
         self.module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(self.module)
+        actual_check_output = subprocess.check_output
+
+        def fixture_check_output(command, **kwargs):
+            if command[0] == "git":
+                # Production clears GIT_*; keep fixture reads independent of host URL rewrites.
+                kwargs["env"] = dict(
+                    kwargs.get("env", os.environ),
+                    GIT_CONFIG_GLOBAL=os.devnull,
+                    GIT_CONFIG_SYSTEM=os.devnull,
+                )
+            return actual_check_output(command, **kwargs)
+
+        git_reads = patch.object(
+            self.module.subprocess, "check_output", side_effect=fixture_check_output
+        )
+        git_reads.start()
+        self.addCleanup(git_reads.stop)
 
     def local_context(self):
         return patch.object(
