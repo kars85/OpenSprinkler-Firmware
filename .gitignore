@@ -19,3 +19,34 @@ node_modules
 # Local AI tooling / session artifacts (Claude Code, Octopus orchestration)
 .claude/
 .claude-octopus/
+
+# Local agent runtime and credentials
+.empirica/
+.abc-state/
+.env
+.env.local
+.env.*.local
+
+# Discoverable project-owned workflow files
+!/.agent-workflow.json
+!/.claude/
+!/.claude/commands/
+!/.claude/commands/abc.md
+!/.claude/commands/intake.md
+!/.claude/skills/
+!/.agents/
+!/.agents/skills/
+!/skills/
+!/scripts/
+!/scripts/agent-workflow.py
+!/docs/
+!/docs/agent-workflow.md
+!/skills/opensprinkler-firmware-abc/
+!/skills/opensprinkler-firmware-abc/SKILL.md
+!/.agents/skills/opensprinkler-firmware-abc
+!/.claude/skills/opensprinkler-firmware-abc
+!/skills/opensprinkler-firmware-intake/
+!/skills/opensprinkler-firmware-intake/SKILL.md
+!/.agents/skills/opensprinkler-firmware-intake
+!/.claude/skills/opensprinkler-firmware-intake
+!/scripts/test_agent_workflow.py
