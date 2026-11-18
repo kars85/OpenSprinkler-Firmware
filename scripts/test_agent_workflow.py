@@ -171,6 +171,41 @@ class RoutingTests(unittest.TestCase):
                 with self.assertRaisesRegex(RuntimeError, "destination"):
                     self.module.context()
 
+    def test_malformed_origin_errors_omit_credentials(self):
+        for authority in ("github.com\uff0f.invalid", "github.com:invalid-port"):
+            with self.subTest(authority=authority):
+                origin = (
+                    "https://fake-user:fake-private-token@"
+                    + authority
+                    + "/example/test.git"
+                )
+                subprocess.run(
+                    [
+                        "git",
+                        "-C",
+                        str(self.root),
+                        "remote",
+                        "set-url",
+                        "origin",
+                        origin,
+                    ],
+                    check=True,
+                )
+                result = subprocess.run(
+                    [
+                        sys.executable,
+                        str(self.root / "scripts/agent-workflow.py"),
+                        "status",
+                    ],
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+                self.assertNotEqual(result.returncode, 0)
+                self.assertNotIn("fake-private-token", result.stderr)
+                self.assertNotIn("fake-user", result.stderr)
+                self.assertIn("GitHub destination", result.stderr)
+
     def test_workflow_allowlist_keeps_local_agent_files_private(self):
         checkout = SOURCE.parent.parent
         (self.root / ".gitignore").write_bytes((checkout / ".gitignore").read_bytes())

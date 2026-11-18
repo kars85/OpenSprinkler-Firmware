@@ -46,12 +46,18 @@ def context():
     ).strip()
     if origin.startswith("git@github.com:"):
         origin = "ssh://git@github.com/" + origin.removeprefix("git@github.com:")
-    remote = urlsplit(origin)
+    try:
+        remote = urlsplit(origin)
+        port = remote.port
+    except ValueError:
+        raise RuntimeError(
+            "GitHub destination does not match this checkout origin"
+        ) from None
     repository = remote.path.removeprefix("/").rstrip("/").removesuffix(".git")
     if (
         remote.scheme not in ("https", "ssh")
         or remote.hostname != "github.com"
-        or remote.port not in (None, 22 if remote.scheme == "ssh" else 443)
+        or port not in (None, 22 if remote.scheme == "ssh" else 443)
         or remote.query
         or remote.fragment
         or repository.lower() != config["repository"].lower()
