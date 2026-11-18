@@ -50,3 +50,8 @@ node_modules
 !/.agents/skills/opensprinkler-firmware-intake
 !/.claude/skills/opensprinkler-firmware-intake
 !/scripts/test_agent_workflow.py
+
+# Machine-local agent credentials and generated Python state
+.claude/settings.local.json
+.claude/agent-memory/
+__pycache__/
